@@ -1,0 +1,22 @@
+# Django Core
+Django>=5.0
+djangorestframework>=3.14
+django-cors-headers>=4.3
+
+# Authentication
+djangorestframework-simplejwt>=5.3
+
+# Database
+psycopg2-binary>=2.9
+dj-database-url>=2.1
+
+# PDF Generation
+reportlab>=4.0
+Pillow>=10.0
+
+# Utilities
+python-decouple>=3.8
+python-dateutil>=2.8
+
+# Development
+django-extensions>=3.2

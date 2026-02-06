@@ -1,0 +1,319 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base Styles */
+@layer base {
+  * {
+    @apply border-dark-200;
+  }
+
+  body {
+    @apply bg-dark-50 text-dark-900 font-sans antialiased;
+  }
+
+  /* Scrollbar Styling */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-100 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-300 rounded-full hover:bg-dark-400 transition-colors;
+  }
+}
+
+/* Component Styles */
+@layer components {
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-2xl shadow-card border border-dark-100 p-6 transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply hover:shadow-soft hover:-translate-y-0.5;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn text-white shadow-lg;
+    background: linear-gradient(135deg, #0015C5 0%, #0010A0 100%);
+    box-shadow: 0 4px 15px rgba(0, 21, 197, 0.35);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #0010A0 0%, #000B80 100%);
+    box-shadow: 0 6px 20px rgba(0, 21, 197, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:focus {
+    @apply ring-2 ring-offset-2;
+    --tw-ring-color: #0015C5;
+  }
+
+  .btn-secondary {
+    @apply btn bg-dark-100 text-dark-700 hover:bg-dark-200 focus:ring-dark-500;
+  }
+
+  .btn-success {
+    @apply btn bg-gradient-to-r from-success-500 to-success-600 text-white hover:from-success-600 hover:to-green-700 focus:ring-success-500;
+  }
+
+  .btn-danger {
+    @apply btn bg-gradient-to-r from-danger-500 to-danger-600 text-white hover:from-danger-600 hover:to-red-700 focus:ring-danger-500;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-dark-600 hover:bg-dark-100 focus:ring-dark-500;
+  }
+
+  .btn-icon {
+    @apply btn p-2.5 aspect-square;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-4 py-2.5 bg-dark-50 border border-dark-200 rounded-xl text-dark-900 placeholder:text-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+  }
+
+  .input-error {
+    @apply border-danger-500 focus:ring-danger-500;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-dark-700 mb-1.5;
+  }
+
+  /* Select */
+  .select {
+    @apply input appearance-none cursor-pointer pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+  }
+
+  /* Tables */
+  .table-container {
+    @apply overflow-x-auto rounded-xl border border-dark-200;
+  }
+
+  .table {
+    @apply w-full text-sm;
+  }
+
+  .table thead {
+    @apply bg-dark-50/80 border-b border-dark-200;
+  }
+
+  .table th {
+    @apply px-4 py-3 text-left font-semibold text-dark-600 uppercase tracking-wider text-xs;
+  }
+
+  .table td {
+    @apply px-4 py-3 text-dark-700;
+  }
+
+  .table tbody tr {
+    @apply border-b border-dark-100 hover:bg-dark-50/50 transition-colors;
+  }
+
+  .table tbody tr:last-child {
+    @apply border-0;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-success-100 text-success-600;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning-100 text-warning-600;
+  }
+
+  .badge-danger {
+    @apply badge bg-danger-100 text-danger-600;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-600;
+  }
+
+  .badge-gray {
+    @apply badge bg-dark-100 text-dark-600;
+  }
+
+  /* Stats Card */
+  .stats-card {
+    @apply card relative overflow-hidden;
+  }
+
+  .stats-card::before {
+    content: '';
+    @apply absolute top-0 right-0 w-32 h-32 rounded-full opacity-10 -translate-y-1/2 translate-x-1/2;
+  }
+
+  .stats-card-primary::before {
+    @apply bg-primary-500;
+  }
+
+  .stats-card-success::before {
+    @apply bg-success-500;
+  }
+
+  .stats-card-warning::before {
+    @apply bg-warning-500;
+  }
+
+  .stats-card-danger::before {
+    @apply bg-danger-500;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    @apply fixed inset-0 bg-dark-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  }
+
+  .modal {
+    @apply bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] overflow-auto animate-slide-up;
+  }
+
+  .modal-header {
+    @apply flex items-center justify-between p-6 border-b border-dark-200;
+  }
+
+  .modal-body {
+    @apply p-6;
+  }
+
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 p-6 border-t border-dark-200;
+  }
+
+  /* Premium Sidebar Styles */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-dark-600 transition-all duration-300 ease-out;
+  }
+
+  .sidebar-item:hover {
+    @apply bg-dark-100/80 text-dark-900;
+    transform: translateX(4px);
+  }
+
+  .sidebar-item-active {
+    @apply bg-gradient-to-r from-primary-50 to-primary-100/50 text-primary-600 font-medium;
+    box-shadow: 0 0 20px -5px rgba(14, 165, 233, 0.15);
+  }
+
+  .sidebar-item-active:hover {
+    @apply bg-primary-100;
+    transform: none;
+  }
+
+  /* Sidebar icon glow effect */
+  .sidebar-icon-glow {
+    @apply relative;
+  }
+
+  .sidebar-icon-glow::after {
+    content: '';
+    @apply absolute inset-0 rounded-xl blur-lg opacity-0 transition-opacity duration-300;
+    background: inherit;
+  }
+
+  .sidebar-icon-glow:hover::after {
+    @apply opacity-40;
+  }
+
+  /* Custom scrollbar for sidebar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-dark-200 rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-dark-300;
+  }
+
+  /* Empty State */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-12 text-center;
+  }
+
+  .empty-state-icon {
+    @apply w-16 h-16 text-dark-300 mb-4;
+  }
+
+  /* Loading */
+  .spinner {
+    @apply inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin;
+  }
+
+  /* Glass Effect */
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+  }
+}
+
+/* Utility Classes */
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-accent-500;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600;
+  }
+
+  .gradient-accent {
+    @apply bg-gradient-to-r from-accent-500 to-accent-600;
+  }
+
+  .animate-in {
+    @apply animate-fade-in;
+  }
+}
+
+/* ApexCharts Customization */
+.apexcharts-tooltip {
+  @apply !rounded-xl !shadow-lg !border-0;
+}
+
+.apexcharts-tooltip-title {
+  @apply !bg-dark-50 !border-dark-200;
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    @apply bg-white;
+  }
+
+  .card {
+    @apply shadow-none border-0;
+  }
+}
