@@ -86,6 +86,7 @@ class Expense(models.Model):
         ('maintenance', 'Maintenance'),
         ('office', 'Office Supplies'),
         ('marketing', 'Marketing'),
+        ('wastage', 'Wastage Material'),
         ('other', 'Other'),
     ]
     
@@ -96,6 +97,11 @@ class Expense(models.Model):
     payment_mode = models.CharField(max_length=20, default='cash')
     reference = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
+    
+    # Wastage material tracking fields
+    material_name = models.CharField(max_length=200, blank=True)  # e.g., "A4 Paper", "Ink"
+    quantity_wasted = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    unit = models.CharField(max_length=20, blank=True)  # e.g., "sheets", "kg", "pcs"
     
     created_by = models.ForeignKey('authentication.User', on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -82,7 +82,7 @@ export default function QuickOrder() {
             service_name: '',
             quantity: 1,
             rate: 0,
-            gst_rate: 18
+            gst_rate: 5
         }]);
     };
 

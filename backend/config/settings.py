@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'apps.purchases',
     'apps.reports',
     'apps.settings',
+    'apps.staff',
     'apps.joborders',
     'rest_framework_simplejwt.token_blacklist',
 ]
@@ -91,6 +92,7 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL)
     }
+    DATABASES['default']['CONN_MAX_AGE'] = 600  # Keep connections alive for 10 min
 else:
     # Fallback to SQLite for development
     DATABASES = {

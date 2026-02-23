@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlus, FiSearch, FiEye, FiDownload, FiFileText, FiPrinter, FiMail, FiTrash2, FiAlertTriangle } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEye, FiDownload, FiFileText, FiPrinter, FiMail, FiTrash2, FiAlertTriangle, FiEdit } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { invoicesAPI } from '../services/api';
 import { shareInvoiceViaWhatsApp } from '../utils/whatsappUtils';
@@ -255,6 +255,9 @@ export default function Invoices() {
                                         <td className="px-6 py-4">{getStatusBadge(inv.status)}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1">
+                                                <Link to={`/invoices/${inv.id}/edit`} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Edit">
+                                                    <FiEdit className="w-4 h-4" />
+                                                </Link>
                                                 <button onClick={() => printBill(inv)} className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Print"><FiPrinter className="w-4 h-4" /></button>
                                                 <button onClick={() => downloadBill(inv)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download"><FiDownload className="w-4 h-4" /></button>
                                                 <button onClick={() => sendEmailToCustomer(inv)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Send Email"><FiMail className="w-4 h-4" /></button>

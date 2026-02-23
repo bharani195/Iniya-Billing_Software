@@ -56,7 +56,7 @@ export default function Products() {
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, product: null });
     const [formData, setFormData] = useState({
         name: '', sku: '', category: '', hsn_code: '', sale_price: 0, purchase_price: 0,
-        gst_rate: 18, quantity: 0, min_stock: 10, unit: 'PCS', is_service: false
+        gst_rate: 5, quantity: 0, min_stock: 10, unit: 'PCS', is_service: false
     });
 
     useEffect(() => { fetchData(); }, []);
@@ -106,7 +106,7 @@ export default function Products() {
 
     const openModal = (product = null) => {
         setEditingProduct(product);
-        setFormData(product || { name: '', sku: '', category: '', hsn_code: '', sale_price: 0, purchase_price: 0, gst_rate: 18, quantity: 0, min_stock: 10, unit: 'PCS', is_service: false });
+        setFormData(product || { name: '', sku: '', category: '', hsn_code: '', sale_price: 0, purchase_price: 0, gst_rate: 5, quantity: 0, min_stock: 10, unit: 'PCS', is_service: false });
         setIsModalOpen(true);
     };
     const closeModal = () => { setIsModalOpen(false); setEditingProduct(null); };

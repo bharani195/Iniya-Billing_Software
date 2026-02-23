@@ -60,7 +60,7 @@ export default function Settings() {
         currency: '₹',
         decimal_places: '2',
         low_stock_threshold: '15',
-        default_tax_rate: '18',
+        default_tax_rate: '5',
         enable_stock_alert: 'true',
         enable_payment_reminder: 'true',
         paper_size: 'A4',
@@ -435,7 +435,7 @@ export default function Settings() {
                                     </div>
                                     <div className="group">
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Default Tax Rate</label>
-                                        <select value={settings.default_tax_rate || '18'} onChange={(e) => updateSetting('default_tax_rate', e.target.value)} className="input-pro w-full px-4 py-3.5 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 outline-none cursor-pointer">
+                                        <select value={settings.default_tax_rate || '5'} onChange={(e) => updateSetting('default_tax_rate', e.target.value)} className="input-pro w-full px-4 py-3.5 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 outline-none cursor-pointer">
                                             <option value="0">0% (No Tax)</option>
                                             <option value="5">5% GST</option>
                                             <option value="12">12% GST</option>

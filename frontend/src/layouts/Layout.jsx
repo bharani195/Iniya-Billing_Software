@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { notificationsAPI } from '../services/api';
+import { notificationsAPI, invoicesAPI, customersAPI, jobordersAPI } from '../services/api';
 import {
     FiHome, FiUsers, FiBox, FiFileText, FiShoppingCart, FiDollarSign,
     FiTruck, FiBarChart2, FiSettings, FiLogOut, FiMenu, FiX, FiChevronDown,
     FiBriefcase, FiCreditCard, FiPlusCircle, FiBell, FiSearch, FiChevronRight,
-    FiClipboard, FiAlertCircle
+    FiClipboard, FiAlertCircle, FiUserCheck
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
@@ -42,6 +42,7 @@ const sidebarItems = [
     },
     { path: '/expenses', icon: FiCreditCard, label: 'Expenses', color: '#F97316' }, // Orange
     { path: '/payments', icon: FiDollarSign, label: 'Payments', color: '#22C55E' }, // Green
+    { path: '/staff', icon: FiUserCheck, label: 'Staff', color: '#8B5CF6' }, // Violet
     { path: '/reports', icon: FiBarChart2, label: 'Reports', color: '#3B82F6' }, // Blue
     { path: '/settings', icon: FiSettings, label: 'Settings', color: '#14B8A6' }, // Teal
 ];
@@ -205,19 +206,75 @@ export default function Layout() {
     const [notificationCount, setNotificationCount] = useState(0);
     const [notifications, setNotifications] = useState({});
     const [showNotifications, setShowNotifications] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const searchRef = useRef(null);
+    const searchInputRef = useRef(null);
+
+    // Debounced search
+    const searchTimeout = useRef(null);
+    const handleSearch = useCallback((query) => {
+        setSearchQuery(query);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        if (!query.trim()) { setSearchResults([]); setShowSearch(false); return; }
+        setShowSearch(true);
+        setSearchLoading(true);
+        searchTimeout.current = setTimeout(async () => {
+            try {
+                const [invRes, custRes, jobRes] = await Promise.all([
+                    invoicesAPI.getAll({ search: query }).catch(() => ({ data: { results: [] } })),
+                    customersAPI.getAll({ search: query }).catch(() => ({ data: { results: [] } })),
+                    jobordersAPI.getAll({ search: query }).catch(() => ({ data: { results: [] } })),
+                ]);
+                const results = [];
+                (invRes.data?.results || invRes.data || []).slice(0, 4).forEach(inv => {
+                    results.push({ type: 'invoice', label: inv.invoice_number, sub: inv.customer_name, path: '/invoices', icon: '📄' });
+                });
+                (custRes.data?.results || custRes.data || []).slice(0, 4).forEach(c => {
+                    results.push({ type: 'customer', label: c.name, sub: c.phone || c.email || '', path: '/customers', icon: '👤' });
+                });
+                (jobRes.data?.results || jobRes.data || []).slice(0, 4).forEach(j => {
+                    results.push({ type: 'joborder', label: j.job_number, sub: j.customer_name, path: `/joborders/${j.id}`, icon: '📋' });
+                });
+                setSearchResults(results);
+            } catch { setSearchResults([]); }
+            setSearchLoading(false);
+        }, 300);
+    }, []);
+
+    // Keyboard shortcut Ctrl+K
+    useEffect(() => {
+        const handleKey = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+            if (e.key === 'Escape') { setShowSearch(false); setSearchQuery(''); }
+        };
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, []);
+
+    // Click outside to close search
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (searchRef.current && !searchRef.current.contains(e.target)) setShowSearch(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Fetch notification counts
     const fetchNotifications = async () => {
         try {
             const counts = await notificationsAPI.getCounts();
 
-            // Also fetch payment notifications
+            // Also fetch payment notifications via axios (not raw fetch)
             try {
-                const paymentNotifs = await fetch('/api/settings/notifications/', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                    }
-                }).then(res => res.json());
+                const paymentRes = await notificationsAPI.getPaymentNotifications();
+                const paymentNotifs = paymentRes.data || paymentRes;
 
                 // Show toast for new unread payment notifications
                 if (paymentNotifs.unread_count > 0 && paymentNotifs.notifications?.[0]) {
@@ -441,17 +498,56 @@ export default function Layout() {
                                 <FiMenu className="w-5 h-5 text-dark-600" />
                             </button>
 
-                            {/* Search Bar with Electric Purple focus ring */}
-                            <div className="hidden md:flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 w-80 transition-all duration-200 group border border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md focus-within:border-[#A500FF] focus-within:shadow-[0_0_15px_rgba(165,0,255,0.2)] focus-within:ring-2 focus-within:ring-[#A500FF]/20">
-                                <FiSearch className="w-4 h-4 text-gray-400 group-focus-within:text-[#A500FF] transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Search invoices, customers..."
-                                    className="bg-transparent border-none outline-none text-sm w-full text-gray-700 placeholder:text-gray-400"
-                                />
-                                <kbd className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded border border-gray-200">
-                                    ⌘K
-                                </kbd>
+                            {/* Functional Search Bar */}
+                            <div ref={searchRef} className="hidden md:block relative">
+                                <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 w-80 transition-all duration-200 group border border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md focus-within:border-[#A500FF] focus-within:shadow-[0_0_15px_rgba(165,0,255,0.2)] focus-within:ring-2 focus-within:ring-[#A500FF]/20">
+                                    <FiSearch className="w-4 h-4 text-gray-400 group-focus-within:text-[#A500FF] transition-colors" />
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        placeholder="Search invoices, customers..."
+                                        value={searchQuery}
+                                        onChange={(e) => handleSearch(e.target.value)}
+                                        onFocus={() => searchQuery.trim() && setShowSearch(true)}
+                                        className="bg-transparent border-none outline-none text-sm w-full text-gray-700 placeholder:text-gray-400"
+                                    />
+                                    <kbd className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded border border-gray-200">
+                                        Ctrl+K
+                                    </kbd>
+                                </div>
+                                {/* Search Results Dropdown */}
+                                {showSearch && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden max-h-80 overflow-y-auto">
+                                        {searchLoading ? (
+                                            <div className="flex items-center justify-center py-6 gap-2">
+                                                <div className="w-4 h-4 border-2 border-[#A500FF] border-t-transparent rounded-full animate-spin"></div>
+                                                <span className="text-sm text-gray-500">Searching...</span>
+                                            </div>
+                                        ) : searchResults.length > 0 ? (
+                                            <>
+                                                {searchResults.map((r, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => { navigate(r.path); setShowSearch(false); setSearchQuery(''); }}
+                                                        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                                                    >
+                                                        <span className="text-lg">{r.icon}</span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-gray-900 truncate">{r.label}</p>
+                                                            <p className="text-xs text-gray-500 truncate">{r.sub}</p>
+                                                        </div>
+                                                        <span className="text-[10px] font-medium text-gray-400 uppercase bg-gray-100 px-2 py-0.5 rounded">{r.type}</span>
+                                                    </button>
+                                                ))}
+                                            </>
+                                        ) : (
+                                            <div className="py-6 text-center text-gray-500 text-sm">
+                                                <FiSearch className="w-6 h-6 mx-auto mb-2 opacity-30" />
+                                                No results for "{searchQuery}"
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -476,9 +572,24 @@ export default function Layout() {
                                             onClick={() => setShowNotifications(false)}
                                         />
                                         <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
-                                            <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-[#A500FF]/5 to-transparent">
-                                                <h3 className="font-semibold text-gray-900">Notifications</h3>
-                                                <p className="text-xs text-gray-500">Real-time alerts</p>
+                                            <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-[#A500FF]/5 to-transparent flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                                                    <p className="text-xs text-gray-500">Real-time alerts</p>
+                                                </div>
+                                                {notifications.payment_unread > 0 && (
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                await notificationsAPI.markAllAsRead();
+                                                                fetchNotifications();
+                                                            } catch (e) { console.error(e); }
+                                                        }}
+                                                        className="text-xs text-[#A500FF] hover:text-[#8400CC] font-medium"
+                                                    >
+                                                        Mark all read
+                                                    </button>
+                                                )}
                                             </div>
                                             <div className="max-h-64 overflow-y-auto">
                                                 {notificationCount === 0 ? (
@@ -492,7 +603,14 @@ export default function Layout() {
                                                         {notifications.payment_notifications?.filter(n => !n.is_read).slice(0, 3).map((notif) => (
                                                             <button
                                                                 key={notif.id}
-                                                                onClick={() => { navigate('/payments'); setShowNotifications(false); }}
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await notificationsAPI.markAsRead([notif.id]);
+                                                                    } catch (e) { console.error(e); }
+                                                                    setShowNotifications(false);
+                                                                    navigate('/payments');
+                                                                    fetchNotifications();
+                                                                }}
                                                                 className="w-full px-4 py-3 flex items-center gap-3 hover:bg-emerald-50 transition-colors text-left border-b border-gray-50"
                                                             >
                                                                 <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -539,7 +657,7 @@ export default function Layout() {
                                             <div className="px-4 py-2 border-t border-gray-100 bg-gray-50">
                                                 <span className="flex items-center gap-1 text-xs text-gray-500">
                                                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                                                    Updates every 60 seconds
+                                                    Updates every 30 seconds
                                                 </span>
                                             </div>
                                         </div>

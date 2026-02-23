@@ -181,6 +181,34 @@ class JobOrderViewSet(viewsets.ModelViewSet):
         
         return super().create(request, *args, **kwargs)
     
+    def perform_create(self, serializer):
+        """Auto-transition to 'finishing' if workers are assigned at creation"""
+        instance = serializer.save(created_by=self.request.user)
+        if instance.assigned_workers.exists() and instance.status == 'received':
+            instance.status = 'finishing'
+            instance.save(update_fields=['status'])
+            JobStatusHistory.objects.create(
+                job_order=instance,
+                from_status='received',
+                to_status='finishing',
+                changed_by=self.request.user,
+                notes='Auto: workers assigned'
+            )
+    
+    def perform_update(self, serializer):
+        """Auto-transition to 'finishing' if workers are newly assigned during edit"""
+        instance = serializer.save()
+        if instance.assigned_workers.exists() and instance.status == 'received':
+            instance.status = 'finishing'
+            instance.save(update_fields=['status'])
+            JobStatusHistory.objects.create(
+                job_order=instance,
+                from_status='received',
+                to_status='finishing',
+                changed_by=self.request.user,
+                notes='Auto: workers assigned'
+            )
+    
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
         """Update job order status"""
@@ -296,9 +324,23 @@ class JobOrderViewSet(viewsets.ModelViewSet):
             # Calculate invoice totals
             invoice.calculate_totals()
             
-            # Link invoice to job order
+            # Link invoice to job order and auto-mark as delivered
             job_order.invoice = invoice
+            old_status = job_order.status
+            job_order.status = 'delivered'
+            if not job_order.actual_delivery:
+                job_order.actual_delivery = timezone.now().date()
             job_order.save()
+            
+            # Record status change
+            if old_status != 'delivered':
+                JobStatusHistory.objects.create(
+                    job_order=job_order,
+                    from_status=old_status,
+                    to_status='delivered',
+                    changed_by=request.user,
+                    notes=f'Auto: invoice {invoice.invoice_number} created'
+                )
             
             return Response({
                 'message': 'Invoice created successfully',
@@ -344,12 +386,12 @@ class JobOrderViewSet(viewsets.ModelViewSet):
         
         total = JobOrder.objects.count()
         in_progress = JobOrder.objects.filter(
-            status__in=['received', 'designing', 'color_separation', 'printing', 'drying', 'finishing']
+            status__in=['received', 'finishing']
         ).count()
         ready = JobOrder.objects.filter(status='ready').count()
         overdue = JobOrder.objects.filter(
             expected_delivery__lt=today,
-            status__in=['received', 'designing', 'color_separation', 'printing', 'drying', 'finishing']
+            status__in=['received', 'finishing']
         ).count()
         delivered_today = JobOrder.objects.filter(
             actual_delivery=today

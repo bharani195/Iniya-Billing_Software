@@ -5,7 +5,7 @@ import {
     FiPlus, FiTrash2, FiSave, FiArrowLeft, FiArrowRight, FiDollarSign, FiUsers, FiGrid, FiFileText
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { jobordersAPI, customersAPI } from '../services/api';
+import { jobordersAPI, customersAPI, staffAPI } from '../services/api';
 
 export default function CreateJobOrder() {
     const navigate = useNavigate();
@@ -47,6 +47,7 @@ export default function CreateJobOrder() {
         customer_notes: '',
         internal_notes: '',
         assigned_workers: [],
+        worker_assignments: [],
     });
 
     const [services, setServices] = useState([]);
@@ -106,7 +107,7 @@ export default function CreateJobOrder() {
                     quantity: s.quantity,
                     unit: s.unit || 'unit',
                     rate: s.rate,
-                    gst_rate: s.gst_rate || 18,
+                    gst_rate: s.gst_rate || 5,
                 })));
             }
 
@@ -126,12 +127,13 @@ export default function CreateJobOrder() {
 
     const fetchInitialData = async () => {
         try {
-            const [customersRes, materialsRes, printingRes, ratesRes, numberRes] = await Promise.all([
+            const [customersRes, materialsRes, printingRes, ratesRes, numberRes, staffRes] = await Promise.all([
                 customersAPI.getDropdown(),
                 jobordersAPI.getMaterialTypes(),
                 jobordersAPI.getPrintingTypes(),
                 jobordersAPI.getServiceRates(),
-                jobordersAPI.getNextNumber()
+                jobordersAPI.getNextNumber(),
+                staffAPI.getAll({ active: true }).catch(() => ({ data: [] }))
             ]);
 
             setCustomers(customersRes.data || []);
@@ -139,15 +141,7 @@ export default function CreateJobOrder() {
             setPrintingTypes(printingRes.data?.results || printingRes.data || []);
             setServiceRates(ratesRes.data?.results || ratesRes.data || []);
             setNextJobNumber(numberRes.data.job_number);
-
-            // Fetch staff separately (optional - don't block form if this fails)
-            try {
-                const staffRes = await jobordersAPI.getStaff();
-                setStaffList(staffRes.data || []);
-            } catch (staffError) {
-                console.warn('Could not load staff list:', staffError.message);
-                setStaffList([]);
-            }
+            setStaffList(staffRes.data?.results || staffRes.data || []);
         } catch (error) {
             console.error('Error fetching data:', error);
             toast.error('Failed to load form data');
@@ -188,7 +182,7 @@ export default function CreateJobOrder() {
             quantity: 1,
             unit: 'unit',
             rate: 0,
-            gst_rate: 18
+            gst_rate: 5
         }]);
     };
 
@@ -261,8 +255,11 @@ export default function CreateJobOrder() {
             formDataToSend.set('screen_charges', parseFloat(formData.screen_charges) || 0);
             formDataToSend.set('advance_received', parseFloat(formData.advance_received) || 0);
 
-            // Add assigned workers as JSON array
+            // Add assigned workers as JSON array (for legacy M2M field)
             formDataToSend.append('assigned_workers', JSON.stringify(formData.assigned_workers));
+
+            // Add worker assignments with task details as separate data
+            formDataToSend.append('worker_assignments', JSON.stringify(formData.worker_assignments));
 
             // Add design image if selected
             if (designImage) {
@@ -296,6 +293,23 @@ export default function CreateJobOrder() {
             } else {
                 const response = await jobordersAPI.create(formDataToSend);
                 createdOrder = response.data;
+
+                // Save worker assignments with task details
+                if (formData.worker_assignments.length > 0 && createdOrder?.id) {
+                    try {
+                        await staffAPI.bulkAssign({
+                            job_order: createdOrder.id,
+                            assignments: formData.worker_assignments.map(wa => ({
+                                staff: wa.staff,
+                                task_description: wa.task_description || '',
+                                estimated_hours: wa.estimated_hours || 0,
+                            }))
+                        });
+                    } catch (err) {
+                        console.warn('Worker assignment failed:', err);
+                    }
+                }
+
                 toast.success('Order created successfully');
 
                 // If from Quick Order flow, navigate to Create Invoice
@@ -307,7 +321,8 @@ export default function CreateJobOrder() {
                             orderId: createdOrder.id,
                             orderNumber: createdOrder.job_number,
                             services: servicesData,
-                            total: total
+                            total: total,
+                            advanceReceived: parseFloat(formData.advance_received) || 0
                         }
                     });
                 } else {
@@ -679,53 +694,113 @@ export default function CreateJobOrder() {
                         <FiUsers className="w-5 h-5 text-[#A500FF]" />
                         Assign Workers
                     </h2>
-                    <div className="grid grid-cols-1 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Select Staff Members
-                            </label>
-                            {staffList.length === 0 ? (
-                                <p className="text-sm text-gray-500 py-2">No staff members available. Add staff users first.</p>
-                            ) : (
+                    {staffList.length === 0 ? (
+                        <p className="text-sm text-gray-500 py-2">No staff members available. <a href="/staff" className="text-[#A500FF] underline">Add staff first</a></p>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Staff selection chips */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Staff Members</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {staffList.map(staff => (
-                                        <label
-                                            key={staff.id}
-                                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-all ${formData.assigned_workers.includes(staff.id)
-                                                ? 'border-[#A500FF] bg-[#A500FF]/10 text-[#A500FF]'
-                                                : 'border-gray-200 hover:border-gray-300'
-                                                }`}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.assigned_workers.includes(staff.id)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
+                                    {staffList.map(staff => {
+                                        const isSelected = formData.worker_assignments.some(wa => wa.staff === staff.id);
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={staff.id}
+                                                onClick={() => {
+                                                    if (isSelected) {
                                                         setFormData(prev => ({
                                                             ...prev,
-                                                            assigned_workers: [...prev.assigned_workers, staff.id]
+                                                            assigned_workers: prev.assigned_workers.filter(id => id !== staff.id),
+                                                            worker_assignments: prev.worker_assignments.filter(wa => wa.staff !== staff.id)
                                                         }));
                                                     } else {
                                                         setFormData(prev => ({
                                                             ...prev,
-                                                            assigned_workers: prev.assigned_workers.filter(id => id !== staff.id)
+                                                            assigned_workers: [...prev.assigned_workers, staff.id],
+                                                            worker_assignments: [...prev.worker_assignments, {
+                                                                staff: staff.id,
+                                                                staff_name: staff.name,
+                                                                role: staff.role_display || staff.role,
+                                                                task_description: '',
+                                                                estimated_hours: 0,
+                                                            }]
                                                         }));
                                                     }
                                                 }}
-                                                className="sr-only"
+                                                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-all ${isSelected
+                                                    ? 'border-[#A500FF] bg-[#A500FF]/10 text-[#A500FF] shadow-sm'
+                                                    : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${isSelected ? 'bg-[#A500FF]' : 'bg-gray-400'
+                                                    }`}>{staff.name?.charAt(0)?.toUpperCase()}</span>
+                                                {staff.name}
+                                                <span className="text-xs opacity-60">({staff.role_display || staff.role})</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Task details for each assigned worker */}
+                            {formData.worker_assignments.length > 0 && (
+                                <div className="space-y-3">
+                                    <label className="block text-sm font-medium text-gray-700">Task Details</label>
+                                    {formData.worker_assignments.map((wa, idx) => (
+                                        <div key={wa.staff} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                            <div className="w-8 h-8 rounded-full bg-[#A500FF] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                                {wa.staff_name?.charAt(0)?.toUpperCase()}
+                                            </div>
+                                            <div className="flex-shrink-0 min-w-[100px]">
+                                                <p className="text-sm font-semibold text-gray-800">{wa.staff_name}</p>
+                                                <p className="text-xs text-gray-400">{wa.role}</p>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                placeholder="Task description (e.g. Handle printing)"
+                                                value={wa.task_description}
+                                                onChange={(e) => {
+                                                    const updated = [...formData.worker_assignments];
+                                                    updated[idx] = { ...updated[idx], task_description: e.target.value };
+                                                    setFormData(prev => ({ ...prev, worker_assignments: updated }));
+                                                }}
+                                                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-[#A500FF] focus:ring-2 focus:ring-[#A500FF]/20 outline-none"
                                             />
-                                            <span className="text-sm font-medium">{staff.name || staff.username}</span>
-                                        </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.5"
+                                                placeholder="Hrs"
+                                                value={wa.estimated_hours || ''}
+                                                onChange={(e) => {
+                                                    const updated = [...formData.worker_assignments];
+                                                    updated[idx] = { ...updated[idx], estimated_hours: parseFloat(e.target.value) || 0 };
+                                                    setFormData(prev => ({ ...prev, worker_assignments: updated }));
+                                                }}
+                                                className="w-20 px-3 py-2 rounded-lg border border-gray-200 text-sm text-center focus:border-[#A500FF] focus:ring-2 focus:ring-[#A500FF]/20 outline-none"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        assigned_workers: prev.assigned_workers.filter(id => id !== wa.staff),
+                                                        worker_assignments: prev.worker_assignments.filter(w => w.staff !== wa.staff)
+                                                    }));
+                                                }}
+                                                className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                            >
+                                                <FiTrash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     ))}
+                                    <p className="text-xs text-gray-400 mt-1">{formData.worker_assignments.length} worker(s) assigned • Tasks will be tracked in the job order</p>
                                 </div>
                             )}
-                            {formData.assigned_workers.length > 0 && (
-                                <p className="text-xs text-gray-500 mt-2">
-                                    {formData.assigned_workers.length} worker(s) selected
-                                </p>
-                            )}
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Services */}

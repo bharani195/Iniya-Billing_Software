@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
     FiFileText, FiUser, FiArrowLeft, FiArrowRight, FiPlus, FiTrash2, FiSave, FiCalendar, FiCheck, FiClipboard
 } from 'react-icons/fi';
@@ -9,9 +9,12 @@ import { invoicesAPI, customersAPI } from '../services/api';
 export default function CreateInvoice() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { id } = useParams();
+    const isEditMode = Boolean(id);
     const [loading, setLoading] = useState(false);
     const [customers, setCustomers] = useState([]);
     const [nextInvoiceNumber, setNextInvoiceNumber] = useState('');
+    const [advanceAmount, setAdvanceAmount] = useState(0);
 
     // Check if coming from Quick Order flow
     const fromQuickOrder = location.state?.fromQuickOrder || false;
@@ -25,29 +28,60 @@ export default function CreateInvoice() {
     });
 
     const [items, setItems] = useState([
-        { item_name: '', description: '', quantity: 1, rate: 0, gst_rate: 18 }
+        { item_name: '', description: '', quantity: 1, rate: 0, gst_rate: 5 }
     ]);
 
     useEffect(() => {
         fetchInitialData();
 
-        // Auto-populate from Quick Order flow data
-        if (fromQuickOrder) {
+        if (isEditMode) {
+            loadInvoice();
+        } else if (fromQuickOrder) {
             if (orderData.customerName) {
                 setFormData(prev => ({ ...prev, customer_name: orderData.customerName }));
             }
-            // Populate items from order services
+            if (orderData.advanceReceived) {
+                setAdvanceAmount(parseFloat(orderData.advanceReceived) || 0);
+            }
             if (orderData.services && orderData.services.length > 0) {
                 setItems(orderData.services.map(service => ({
                     item_name: service.service_name || '',
                     description: service.description || '',
                     quantity: service.quantity || 1,
                     rate: service.rate || 0,
-                    gst_rate: service.gst_rate || 18
+                    gst_rate: service.gst_rate || 5
                 })));
             }
         }
-    }, [fromQuickOrder, orderData.customerName, orderData.services]);
+    }, [id]);
+
+    const loadInvoice = async () => {
+        try {
+            const res = await invoicesAPI.getById(id);
+            const inv = res.data;
+            setFormData({
+                customer_name: inv.customer_name || '',
+                invoice_date: inv.invoice_date || '',
+                due_date: inv.due_date || '',
+                notes: inv.notes || '',
+            });
+            setNextInvoiceNumber(inv.invoice_number || '');
+            setAdvanceAmount(parseFloat(inv.received) || 0);
+            if (inv.items && inv.items.length > 0) {
+                setItems(inv.items.map(item => ({
+                    item_name: item.item_name || '',
+                    description: item.description || '',
+                    quantity: item.quantity || 1,
+                    rate: item.price || item.rate || 0,
+                    gst_rate: item.tax_rate || item.gst_rate || 5,
+                })));
+            }
+        } catch (error) {
+            console.error('Error loading invoice:', error);
+            toast.error('Failed to load invoice');
+            navigate('/invoices');
+        }
+    };
 
     const fetchInitialData = async () => {
         try {
@@ -56,7 +90,9 @@ export default function CreateInvoice() {
                 invoicesAPI.getNextNumber()
             ]);
             setCustomers(customersRes.data || []);
-            setNextInvoiceNumber(numberRes.data.invoice_number || 'INV-0001');
+            if (!isEditMode) {
+                setNextInvoiceNumber(numberRes.data.invoice_number || 'INV-0001');
+            }
         } catch (error) {
             console.error('Error fetching data:', error);
             toast.error('Failed to load form data');
@@ -72,7 +108,7 @@ export default function CreateInvoice() {
     };
 
     const addItem = () => {
-        setItems(prev => [...prev, { item_name: '', description: '', quantity: 1, rate: 0, gst_rate: 18 }]);
+        setItems(prev => [...prev, { item_name: '', description: '', quantity: 1, rate: 0, gst_rate: 5 }]);
     };
 
     const updateItem = (index, field, value) => {
@@ -150,6 +186,7 @@ export default function CreateInvoice() {
                 discount_value: 0,
                 is_igst: false,
                 notes: formData.notes || '',
+                received: parseFloat(advanceAmount) || 0,
                 items: items
                     .filter(item => item.item_name.trim())
                     .map(item => ({
@@ -161,8 +198,13 @@ export default function CreateInvoice() {
                     }))
             };
 
-            await invoicesAPI.create(invoiceData);
-            toast.success('Invoice created successfully');
+            if (isEditMode) {
+                await invoicesAPI.update(id, invoiceData);
+                toast.success('Invoice updated successfully');
+            } else {
+                await invoicesAPI.create(invoiceData);
+                toast.success('Invoice created successfully');
+            }
 
             // If from Quick Order flow, navigate to Job Orders
             if (fromQuickOrder) {
@@ -171,10 +213,10 @@ export default function CreateInvoice() {
                 navigate('/invoices');
             }
         } catch (error) {
-            console.error('Error creating invoice:', error);
+            console.error('Error saving invoice:', error);
             const errorMsg = error.response?.data?.detail ||
                 JSON.stringify(error.response?.data) ||
-                'Failed to create invoice';
+                `Failed to ${isEditMode ? 'update' : 'create'} invoice`;
             toast.error(errorMsg);
         } finally {
             setLoading(false);
@@ -213,7 +255,7 @@ export default function CreateInvoice() {
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white flex items-center justify-center font-bold shadow-lg">3</div>
                             <div>
                                 <p className="text-xs text-gray-500">Step 3 of 3</p>
-                                <p className="font-semibold text-gray-900">Create Invoice</p>
+                                <p className="font-semibold text-gray-900">{isEditMode ? 'Edit Invoice' : 'Create Invoice'}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 text-green-500 font-medium">
@@ -246,7 +288,7 @@ export default function CreateInvoice() {
                                     <FiFileText className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold">Create Invoice</h1>
+                                    <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Invoice' : 'Create Invoice'}</h1>
                                     <p className="text-white/70 text-sm">Create a new sales invoice</p>
                                 </div>
                             </div>
@@ -420,13 +462,37 @@ export default function CreateInvoice() {
                                     <span className="text-gray-900">{formatCurrency(subtotal)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">GST</span>
-                                    <span className="text-gray-900">{formatCurrency(tax)}</span>
+                                    <span className="text-gray-500">CGST (2.5%)</span>
+                                    <span className="text-gray-900">{formatCurrency(tax / 2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">SGST (2.5%)</span>
+                                    <span className="text-gray-900">{formatCurrency(tax / 2)}</span>
                                 </div>
                                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                                     <span className="text-gray-900">Total</span>
                                     <span className="text-blue-600">{formatCurrency(total)}</span>
                                 </div>
+                                {/* Advance Payment */}
+                                <div className="flex justify-between items-center text-sm pt-2">
+                                    <span className="text-gray-500">Advance Paid</span>
+                                    <input
+                                        type="number"
+                                        value={advanceAmount}
+                                        onChange={(e) => setAdvanceAmount(parseFloat(e.target.value) || 0)}
+                                        min="0"
+                                        max={total}
+                                        step="0.01"
+                                        className="w-32 px-3 py-1.5 text-right text-sm rounded-lg border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none"
+                                        placeholder="₹0"
+                                    />
+                                </div>
+                                {advanceAmount > 0 && (
+                                    <div className="flex justify-between text-base font-bold text-orange-600 bg-orange-50 rounded-lg px-3 py-2">
+                                        <span>Balance Due</span>
+                                        <span>{formatCurrency(Math.max(0, total - advanceAmount))}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -468,7 +534,7 @@ export default function CreateInvoice() {
                         ) : (
                             <>
                                 <FiCheck className="w-4 h-4" />
-                                {fromQuickOrder ? 'Complete Order' : 'Create Invoice'}
+                                {fromQuickOrder ? 'Complete Order' : isEditMode ? 'Update Invoice' : 'Create Invoice'}
                             </>
                         )}
                     </button>

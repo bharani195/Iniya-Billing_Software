@@ -19,6 +19,8 @@ import CreateJobOrder from './pages/CreateJobOrder';
 import ServiceRates from './pages/ServiceRates';
 import AddCustomer from './pages/AddCustomer';
 import PaymentPage from './pages/PaymentPage';
+import StaffManagement from './pages/StaffManagement';
+import NotFound from './pages/NotFound';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -83,10 +85,13 @@ function AppRoutes() {
                 <Route path="service-rates" element={<ServiceRates />} />
                 <Route path="invoices" element={<Invoices />} />
                 <Route path="invoices/create" element={<CreateInvoice />} />
+                <Route path="invoices/:id" element={<CreateInvoice />} />
+                <Route path="invoices/:id/edit" element={<CreateInvoice />} />
                 <Route path="payments" element={<Payments />} />
                 <Route path="purchases" element={<Purchases />} />
                 <Route path="expenses" element={<Expenses />} />
                 <Route path="reports" element={<Reports />} />
+                <Route path="staff" element={<StaffManagement />} />
                 <Route path="settings" element={<Settings />} />
             </Route>
 
@@ -94,7 +99,7 @@ function AppRoutes() {
             <Route path="/pay/:invoiceId/:token" element={<PaymentPage />} />
             <Route path="/pay/:invoiceId/:token/success" element={<PaymentPage />} />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
         </Routes>
     );
 }

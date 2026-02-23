@@ -319,13 +319,22 @@ def generate_invoice_bill(invoice):
     if discount > 0:
         summary_data.append(['', Paragraph("Discount:", styles['normal']), Paragraph(f"-Rs.{discount:,.2f}", styles['table_cell_right'])])
     
-    if tax_amount > 0:
-        summary_data.append(['', Paragraph("Tax:", styles['normal']), Paragraph(f"Rs.{tax_amount:,.2f}", styles['table_cell_right'])])
+    if invoice.is_igst:
+        igst_amount = Decimal(str(invoice.igst_amount or 0))
+        if igst_amount > 0:
+            summary_data.append(['', Paragraph("IGST:", styles['normal']), Paragraph(f"Rs.{igst_amount:,.2f}", styles['table_cell_right'])])
+    else:
+        cgst_amount = Decimal(str(invoice.cgst_amount or 0))
+        sgst_amount = Decimal(str(invoice.sgst_amount or 0))
+        if cgst_amount > 0:
+            summary_data.append(['', Paragraph("CGST (2.5%):", styles['normal']), Paragraph(f"Rs.{cgst_amount:,.2f}", styles['table_cell_right'])])
+        if sgst_amount > 0:
+            summary_data.append(['', Paragraph("SGST (2.5%):", styles['normal']), Paragraph(f"Rs.{sgst_amount:,.2f}", styles['table_cell_right'])])
     
     summary_data.append(['', Paragraph("<b>GRAND TOTAL:</b>", styles['total_label']), Paragraph(f"<b>Rs.{total_amount:,.2f}</b>", styles['total_value'])])
     
     if received > 0:
-        summary_data.append(['', Paragraph("Amount Paid:", styles['normal']), Paragraph(f"Rs.{received:,.2f}", styles['table_cell_right'])])
+        summary_data.append(['', Paragraph("Advance Paid:", styles['normal']), Paragraph(f"Rs.{received:,.2f}", styles['table_cell_right'])])
         summary_data.append(['', Paragraph("<b>Balance Due:</b>", styles['total_label']), Paragraph(f"<b>Rs.{balance:,.2f}</b>", styles['total_value'])])
     
     summary_table = Table(summary_data, colWidths=[3.0*inch, 1.8*inch, 2.0*inch])

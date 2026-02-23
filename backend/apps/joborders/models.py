@@ -83,10 +83,6 @@ class JobOrder(models.Model):
     
     STATUS_CHOICES = [
         ('received', 'Received'),
-        ('designing', 'Designing'),
-        ('color_separation', 'Color Separation'),
-        ('printing', 'Printing'),
-        ('drying', 'Drying'),
         ('finishing', 'Finishing'),
         ('ready', 'Ready for Delivery'),
         ('delivered', 'Delivered'),

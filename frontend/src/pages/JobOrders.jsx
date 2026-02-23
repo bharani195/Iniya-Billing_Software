@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     FiClipboard, FiPlus, FiSearch,
     FiEdit2, FiTrash2, FiClock, FiCheckCircle, FiAlertCircle,
-    FiTruck, FiRefreshCw, FiChevronDown, FiFilter, FiAlertTriangle
+    FiTruck, FiRefreshCw, FiChevronDown, FiFilter, FiAlertTriangle, FiUsers
 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -10,10 +10,6 @@ import { jobordersAPI } from '../services/api';
 
 const STATUS_CONFIG = {
     received: { label: 'Received', color: 'bg-blue-100 text-blue-700', icon: FiClipboard },
-    designing: { label: 'Designing', color: 'bg-purple-100 text-purple-700', icon: FiEdit2 },
-    color_separation: { label: 'Color Separation', color: 'bg-indigo-100 text-indigo-700', icon: FiFilter },
-    printing: { label: 'Printing', color: 'bg-orange-100 text-orange-700', icon: FiRefreshCw },
-    drying: { label: 'Drying', color: 'bg-yellow-100 text-yellow-700', icon: FiClock },
     finishing: { label: 'Finishing', color: 'bg-teal-100 text-teal-700', icon: FiCheckCircle },
     ready: { label: 'Ready', color: 'bg-green-100 text-green-700', icon: FiCheckCircle },
     delivered: { label: 'Delivered', color: 'bg-gray-100 text-gray-700', icon: FiTruck },
@@ -215,7 +211,7 @@ export default function JobOrders() {
                         </select>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-4">
-                        {['', 'received', 'designing', 'printing', 'ready'].map(status => (
+                        {['', 'received', 'finishing', 'ready', 'delivered'].map(status => (
                             <button key={status} onClick={() => setStatusFilter(status)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${statusFilter === status ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                                 {status ? STATUS_CONFIG[status]?.label : 'All'}
                             </button>
@@ -252,6 +248,7 @@ export default function JobOrders() {
                                         <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Design</th>
                                         <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Material</th>
                                         <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Delivery</th>
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Workers</th>
                                         <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
                                         <th className="text-right px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Amount</th>
                                         <th className="text-right px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
@@ -279,6 +276,22 @@ export default function JobOrders() {
                                                 <td className="px-6 py-4">
                                                     <span className={job.is_overdue ? 'text-red-600 font-medium' : 'text-gray-700'}>{formatDate(job.expected_delivery)}</span>
                                                     {job.is_overdue && <p className="text-xs text-red-500">Overdue</p>}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {job.assigned_worker_names && job.assigned_worker_names.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {job.assigned_worker_names.slice(0, 2).map((name, i) => (
+                                                                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                                                    <FiUsers className="w-3 h-3" />{name}
+                                                                </span>
+                                                            ))}
+                                                            {job.assigned_worker_names.length > 2 && (
+                                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">+{job.assigned_worker_names.length - 2}</span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">—</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 relative">
                                                     <button onClick={() => setShowStatusDropdown(showStatusDropdown === job.id ? null : job.id)} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${statusConfig.color}`}>

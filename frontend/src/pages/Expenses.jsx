@@ -55,7 +55,7 @@ export default function Expenses() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, expense: null });
-    const [formData, setFormData] = useState({ category: 'materials', description: '', amount: '', expense_date: format(new Date(), 'yyyy-MM-dd'), payment_mode: 'cash' });
+    const [formData, setFormData] = useState({ category: 'materials', description: '', amount: '', expense_date: format(new Date(), 'yyyy-MM-dd'), payment_mode: 'cash', material_name: '', quantity_wasted: '', unit: '' });
 
     useEffect(() => { fetchData(); }, []);
 
@@ -74,7 +74,7 @@ export default function Expenses() {
             await purchasesAPI.createExpense({ ...formData, amount: parseFloat(formData.amount) });
             toast.success('Expense added');
             setIsModalOpen(false);
-            setFormData({ category: 'other', description: '', amount: '', expense_date: format(new Date(), 'yyyy-MM-dd'), payment_mode: 'cash' });
+            setFormData({ category: 'other', description: '', amount: '', expense_date: format(new Date(), 'yyyy-MM-dd'), payment_mode: 'cash', material_name: '', quantity_wasted: '', unit: '' });
             fetchData();
         } catch { toast.error('Failed'); }
     };
@@ -98,7 +98,7 @@ export default function Expenses() {
     };
 
     const formatCurrency = (a) => `₹${Number(a || 0).toLocaleString('en-IN')}`;
-    const categories = ['materials', 'consumables', 'rent', 'salary', 'utilities', 'transport', 'maintenance', 'office', 'marketing', 'other'];
+    const categories = ['materials', 'consumables', 'rent', 'salary', 'utilities', 'transport', 'maintenance', 'office', 'marketing', 'wastage', 'other'];
     const modes = ['cash', 'upi', 'bank', 'card'];
 
     return (
@@ -175,8 +175,13 @@ export default function Expenses() {
                                 {expenses.map((e) => (
                                     <tr key={e.id} className="table-row-hover transition-colors">
                                         <td className="px-6 py-4 text-gray-600">{format(new Date(e.expense_date), 'dd MMM yyyy')}</td>
-                                        <td className="px-6 py-4"><span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium uppercase">{e.category}</span></td>
-                                        <td className="px-6 py-4 text-gray-700">{e.description}</td>
+                                        <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${e.category === 'wastage' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>{e.category}</span></td>
+                                        <td className="px-6 py-4 text-gray-700">
+                                            {e.description}
+                                            {e.category === 'wastage' && e.material_name && (
+                                                <div className="text-xs text-red-500 mt-0.5">📦 {e.material_name}{e.quantity_wasted ? ` — ${e.quantity_wasted} ${e.unit || 'pcs'}` : ''}</div>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4 capitalize text-gray-600">{e.payment_mode}</td>
                                         <td className="px-6 py-4"><span className="font-bold text-red-500">{formatCurrency(e.amount)}</span></td>
                                         <td className="px-6 py-4">
@@ -227,6 +232,34 @@ export default function Expenses() {
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
                             <input type="date" value={formData.expense_date} onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-orange-500 outline-none" />
                         </div>
+                        {formData.category === 'wastage' && (
+                            <div className="p-4 bg-red-50 rounded-xl border border-red-200 space-y-3">
+                                <p className="text-xs font-bold text-red-600 uppercase tracking-wider">📦 Wastage Material Details</p>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Material Name</label>
+                                    <input type="text" value={formData.material_name} onChange={(e) => setFormData({ ...formData, material_name: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-white border-2 border-red-100 focus:border-red-400 outline-none" placeholder="e.g., A4 Paper, Ink Cartridge" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Quantity Wasted</label>
+                                        <input type="number" step="0.01" value={formData.quantity_wasted} onChange={(e) => setFormData({ ...formData, quantity_wasted: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-white border-2 border-red-100 focus:border-red-400 outline-none" placeholder="50" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Unit</label>
+                                        <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-white border-2 border-red-100 focus:border-red-400 outline-none">
+                                            <option value="">Select</option>
+                                            <option value="sheets">Sheets</option>
+                                            <option value="pcs">Pieces</option>
+                                            <option value="kg">Kg</option>
+                                            <option value="liters">Liters</option>
+                                            <option value="rolls">Rolls</option>
+                                            <option value="plates">Plates</option>
+                                            <option value="reams">Reams</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50/50">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-colors">Cancel</button>

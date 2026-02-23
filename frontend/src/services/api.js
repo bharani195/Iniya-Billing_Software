@@ -200,7 +200,13 @@ export const notificationsAPI = {
         } catch {
             return { overdue_jobs: 0, pending_payments: 0, low_stock: 0, total: 0 };
         }
-    }
+    },
+    // Get payment notifications via axios (proper token handling)
+    getPaymentNotifications: () => api.get('/settings/notifications/'),
+    // Mark specific notifications as read
+    markAsRead: (ids) => api.post('/settings/notifications/', { ids }),
+    // Mark all notifications as read
+    markAllAsRead: () => api.post('/settings/notifications/', { mark_all: true }),
 };
 
 // Settings API
@@ -245,11 +251,35 @@ export const jobordersAPI = {
     updateServiceRate: (id, data) => api.put(`/joborders/service-rates/${id}/`, data),
     deleteServiceRate: (id) => api.delete(`/joborders/service-rates/${id}/`),
 
-    // Staff for worker assignment
-    getStaff: () => api.get('/auth/users/staff/'),
-
     // Generate Bill PDF
     generateBill: (id) => api.get(`/joborders/${id}/generate_bill/`, { responseType: 'blob' }),
+};
+
+// Staff API
+export const staffAPI = {
+    getAll: (params) => api.get('/staff/members/', { params }),
+    getById: (id) => api.get(`/staff/members/${id}/`),
+    create: (data) => api.post('/staff/members/', data),
+    update: (id, data) => api.put(`/staff/members/${id}/`, data),
+    delete: (id) => api.delete(`/staff/members/${id}/`),
+    getStats: () => api.get('/staff/members/stats/'),
+    getDropdown: () => api.get('/staff/members/dropdown/'),
+    // Attendance
+    getAttendance: (params) => api.get('/staff/attendance/', { params }),
+    bulkMarkAttendance: (data) => api.post('/staff/attendance/bulk_mark/', data),
+    getMonthlySummary: (params) => api.get('/staff/attendance/monthly_summary/', { params }),
+    // Pay Slips
+    getPaySlips: (params) => api.get('/staff/payslips/', { params }),
+    generatePaySlip: (data) => api.post('/staff/payslips/generate/', data),
+    downloadPaySlip: (id) => api.get(`/staff/payslips/${id}/download_pdf/`, { responseType: 'blob' }),
+    markPaid: (id, data) => api.post(`/staff/payslips/${id}/mark_paid/`, data),
+    resetPaid: (id) => api.post(`/staff/payslips/${id}/reset_paid/`),
+    removePaySlip: (id) => api.delete(`/staff/payslips/${id}/`),
+    // Worker Assignments
+    getAssignments: (params) => api.get('/staff/assignments/', { params }),
+    bulkAssign: (data) => api.post('/staff/assignments/bulk_assign/', data),
+    updateAssignmentStatus: (id, data) => api.post(`/staff/assignments/${id}/update_status/`, data),
+    deleteAssignment: (id) => api.delete(`/staff/assignments/${id}/`),
 };
 
 export default api;

@@ -55,7 +55,7 @@ class DefaultSettingsView(APIView):
             
             # Invoice Settings
             ('invoice_prefix', 'INV', 'invoice', 'Invoice number prefix'),
-            ('default_tax_rate', '18', 'invoice', 'Default GST rate'),
+            ('default_tax_rate', '5', 'invoice', 'Default GST rate'),
             ('invoice_terms', 'Thank you for your business!', 'invoice', 'Default invoice terms'),
             
             # Notification Settings

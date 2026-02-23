@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/invoices/', include('apps.invoices.urls')),
     path('api/payments/', include('apps.payments.urls')),
     path('api/purchases/', include('apps.purchases.urls')),
+    path('api/staff/', include('apps.staff.urls')),
     path('api/reports/', include('apps.reports.urls')),
     path('api/settings/', include('apps.settings.urls')),
     path('api/joborders/', include('apps.joborders.urls')),

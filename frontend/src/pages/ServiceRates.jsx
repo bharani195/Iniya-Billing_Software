@@ -66,7 +66,7 @@ export default function ServiceRates() {
         setModalType(type);
         setEditingItem(item);
         if (type === 'service') {
-            setFormData(item ? { name: item.name, category: item.category, rate_type: item.rate_type, rate: item.rate, gst_rate: item.gst_rate, description: item.description || '', is_active: item.is_active } : { name: '', category: 'other', rate_type: 'fixed', rate: 0, gst_rate: 18, description: '', is_active: true });
+            setFormData(item ? { name: item.name, category: item.category, rate_type: item.rate_type, rate: item.rate, gst_rate: item.gst_rate, description: item.description || '', is_active: item.is_active } : { name: '', category: 'other', rate_type: 'fixed', rate: 0, gst_rate: 5, description: '', is_active: true });
         } else {
             setFormData(item ? { name: item.name, description: item.description || '', is_active: item.is_active } : { name: '', description: '', is_active: true });
         }
@@ -299,7 +299,7 @@ export default function ServiceRates() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-gray-700 mb-2">GST %</label>
-                                            <input type="number" value={formData.gst_rate || 18} onChange={(e) => setFormData({ ...formData, gst_rate: parseFloat(e.target.value) || 0 })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-purple-500 outline-none" />
+                                            <input type="number" value={formData.gst_rate || 5} onChange={(e) => setFormData({ ...formData, gst_rate: parseFloat(e.target.value) || 0 })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-purple-500 outline-none" />
                                         </div>
                                     </div>
                                 </>
