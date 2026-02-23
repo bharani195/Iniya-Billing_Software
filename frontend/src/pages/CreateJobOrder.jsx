@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
-    FiClipboard, FiUser, FiPackage, FiImage, FiPrinter, FiCalendar,
+    FiClipboard, FiUser, FiPackage, FiImage, FiPrinter, FiCalendar, FiClock,
     FiPlus, FiTrash2, FiSave, FiArrowLeft, FiArrowRight, FiDollarSign, FiUsers, FiGrid, FiFileText
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -42,6 +42,7 @@ export default function CreateJobOrder() {
         screen_charges: 0,
         screen_details: '',
         expected_delivery: '',
+        estimated_hours: 0,
         priority: 'normal',
         advance_received: 0,
         customer_notes: '',
@@ -91,6 +92,7 @@ export default function CreateJobOrder() {
                 screen_charges: job.screen_charges || 0,
                 screen_details: job.screen_details || '',
                 expected_delivery: job.expected_delivery || '',
+                estimated_hours: job.estimated_hours || 0,
                 priority: job.priority || 'normal',
                 advance_received: job.advance_received || 0,
                 customer_notes: job.customer_notes || '',
@@ -627,6 +629,23 @@ export default function CreateJobOrder() {
                                 onChange={handleChange}
                                 className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#A500FF] focus:ring-2 focus:ring-[#A500FF]/20 outline-none"
                             />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                                <FiClock className="w-4 h-4" />
+                                Est. Work Hours
+                            </label>
+                            <input
+                                type="number"
+                                name="estimated_hours"
+                                value={formData.estimated_hours}
+                                onChange={handleChange}
+                                min="0"
+                                step="0.5"
+                                placeholder="e.g., 8"
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#A500FF] focus:ring-2 focus:ring-[#A500FF]/20 outline-none"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">Used for progress tracking</p>
                         </div>
                         <div className="md:col-span-3">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Color Details</label>

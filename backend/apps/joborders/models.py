@@ -181,6 +181,16 @@ class JobOrder(models.Model):
     expected_delivery = models.DateField(null=True, blank=True)
     actual_delivery = models.DateField(null=True, blank=True)
     
+    # Estimated Work Time
+    estimated_hours = models.DecimalField(
+        max_digits=6, decimal_places=1, default=0,
+        help_text="Estimated hours to complete this job"
+    )
+    work_started_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Auto-set when status changes to finishing"
+    )
+    
     # Status & Priority
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='received')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')

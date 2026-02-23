@@ -59,6 +59,25 @@ class PaymentViewSet(viewsets.ModelViewSet):
             payment_id=payment.id,
             amount=payment.amount
         )
+        
+        # Auto-transition: If linked job order is "ready" and invoice fully paid → "delivered"
+        if payment.invoice:
+            invoice = payment.invoice
+            invoice.refresh_from_db()
+            if invoice.balance <= 0:
+                from apps.joborders.models import JobOrder, JobStatusHistory
+                ready_jobs = JobOrder.objects.filter(invoice=invoice, status='ready')
+                for job in ready_jobs:
+                    job.status = 'delivered'
+                    job.actual_delivery = payment.payment_date
+                    job.save(update_fields=['status', 'actual_delivery', 'balance'])
+                    JobStatusHistory.objects.create(
+                        job_order=job,
+                        from_status='ready',
+                        to_status='delivered',
+                        changed_by=self.request.user,
+                        notes=f'Auto: full payment received (₹{payment.amount:,.2f})'
+                    )
     
     @action(detail=False, methods=['get'])
     def stats(self, request):

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     FiClipboard, FiPlus, FiSearch,
     FiEdit2, FiTrash2, FiClock, FiCheckCircle, FiAlertCircle,
-    FiTruck, FiRefreshCw, FiChevronDown, FiFilter, FiAlertTriangle, FiUsers
+    FiTruck, FiRefreshCw, FiChevronDown, FiFilter, FiAlertTriangle, FiUsers, FiZap
 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -51,6 +51,21 @@ export default function JobOrders() {
     const [statusFilter, setStatusFilter] = useState('');
     const [showStatusDropdown, setShowStatusDropdown] = useState(null);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, job: null });
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+
+    const handleStatusClick = (jobId, e) => {
+        if (showStatusDropdown === jobId) {
+            setShowStatusDropdown(null);
+            return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        setDropdownPos({
+            top: spaceBelow > 220 ? rect.bottom + 4 : rect.top - 220,
+            left: rect.left,
+        });
+        setShowStatusDropdown(jobId);
+    };
 
     const fetchJobs = async (showLoading = false) => {
         try {
@@ -89,14 +104,24 @@ export default function JobOrders() {
     const handleSearch = (e) => { e.preventDefault(); fetchJobs(true); };
 
     const updateStatus = async (jobId, newStatus) => {
+        // Close dropdown immediately
+        setShowStatusDropdown(null);
+
+        // Optimistic UI update — instant feedback
+        setJobs(prev => prev.map(job =>
+            job.id === jobId ? { ...job, status: newStatus } : job
+        ));
+
         try {
             await jobordersAPI.updateStatus(jobId, newStatus);
-            toast.success('Status updated');
+            toast.success(`Status → ${STATUS_CONFIG[newStatus]?.label || newStatus}`);
+            // Re-fetch to get accurate server data (deadline_status, progress, etc.)
             fetchJobs(); fetchStats();
         } catch (error) {
             toast.error('Failed to update status');
+            // Revert on error
+            fetchJobs(true);
         }
-        setShowStatusDropdown(null);
     };
 
     const openDeleteModal = (job) => {
@@ -172,12 +197,13 @@ export default function JobOrders() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                     {[
                         { icon: FiClipboard, label: 'Total Orders', value: stats.total || 0, color: 'blue' },
                         { icon: FiRefreshCw, label: 'In Progress', value: stats.in_progress || 0, color: 'orange' },
                         { icon: FiCheckCircle, label: 'Ready', value: stats.ready || 0, color: 'green' },
                         { icon: FiAlertCircle, label: 'Overdue', value: stats.overdue || 0, color: 'red' },
+                        { icon: FiAlertTriangle, label: 'Deadline Soon', value: stats.deadline_warnings || 0, color: 'yellow' },
                         { icon: FiTruck, label: 'Delivered Today', value: stats.delivered_today || 0, color: 'purple' },
                     ].map((stat, idx) => (
                         <div key={idx} className={`stat-card glass-card rounded-xl p-4 shadow-sm border border-gray-100`}>
@@ -274,8 +300,20 @@ export default function JobOrders() {
                                                     {job.material_type_name && <p className="text-xs text-gray-500">{job.material_type_name}</p>}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className={job.is_overdue ? 'text-red-600 font-medium' : 'text-gray-700'}>{formatDate(job.expected_delivery)}</span>
-                                                    {job.is_overdue && <p className="text-xs text-red-500">Overdue</p>}
+                                                    <span className={`font-medium ${job.deadline_status === 'overdue' ? 'text-red-600' :
+                                                        job.deadline_status === 'danger' ? 'text-red-500' :
+                                                            job.deadline_status === 'warning' ? 'text-amber-600' :
+                                                                'text-gray-700'
+                                                        }`}>{formatDate(job.expected_delivery)}</span>
+                                                    {job.deadline_status === 'overdue' && <span className="block text-xs font-semibold text-red-500 animate-pulse">⬛ OVERDUE</span>}
+                                                    {job.deadline_status === 'danger' && <span className="block text-xs font-semibold text-red-400">🔴 Due Tomorrow</span>}
+                                                    {job.deadline_status === 'warning' && <span className="block text-xs font-medium text-amber-500">🟡 Due Soon</span>}
+                                                    {job.deadline_status === 'safe' && <span className="block text-xs text-green-500">🟢 On Track</span>}
+                                                    {job.priority === 'urgent' && !['delivered', 'cancelled'].includes(job.status) && (
+                                                        <span className="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                                                            <FiZap className="w-2.5 h-2.5" />URGENT
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {job.assigned_worker_names && job.assigned_worker_names.length > 0 ? (
@@ -293,19 +331,38 @@ export default function JobOrders() {
                                                         <span className="text-xs text-gray-400">—</span>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 relative">
-                                                    <button onClick={() => setShowStatusDropdown(showStatusDropdown === job.id ? null : job.id)} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
-                                                        <StatusIcon className="w-3.5 h-3.5" />{statusConfig.label}<FiChevronDown className="w-3 h-3" />
-                                                    </button>
-                                                    {showStatusDropdown === job.id && (
-                                                        <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-10 min-w-[160px]">
-                                                            {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                                                                <button key={key} onClick={() => updateStatus(job.id, key)} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
-                                                                    <config.icon className="w-4 h-4" />{config.label}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-col gap-1">
+                                                        <button onClick={(e) => handleStatusClick(job.id, e)} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                                                            <StatusIcon className="w-3.5 h-3.5" />{statusConfig.label}<FiChevronDown className="w-3 h-3" />
+                                                        </button>
+                                                        {/* Progress bar for finishing jobs */}
+                                                        {job.status === 'finishing' && job.estimated_hours > 0 && (
+                                                            <div className="w-full">
+                                                                <div className="flex items-center gap-1">
+                                                                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className={`h-full rounded-full transition-all duration-500 ${job.progress_percent >= 100 ? 'bg-green-500 animate-pulse' :
+                                                                                job.progress_percent >= 75 ? 'bg-teal-500' :
+                                                                                    job.progress_percent >= 50 ? 'bg-blue-500' :
+                                                                                        'bg-indigo-500'
+                                                                                }`}
+                                                                            style={{ width: `${Math.min(job.progress_percent, 100)}%` }}
+                                                                        ></div>
+                                                                    </div>
+                                                                    <span className="text-[10px] font-medium text-gray-500 min-w-[30px] text-right">{job.progress_percent}%</span>
+                                                                </div>
+                                                                {job.progress_percent >= 100 && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); updateStatus(job.id, 'ready'); }}
+                                                                        className="mt-1 w-full px-2 py-1 text-[10px] font-bold bg-green-500 text-white rounded-lg shadow-lg shadow-green-200 animate-pulse hover:bg-green-600 transition-colors"
+                                                                    >
+                                                                        ✅ Mark Ready?
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <span className="font-bold text-gray-900">{formatCurrency(job.total)}</span>
@@ -327,6 +384,25 @@ export default function JobOrders() {
                 </div>
             </div>
 
+            {/* Fixed-position Status Dropdown (outside table to avoid overflow clipping) */}
+            {showStatusDropdown && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(null)}></div>
+                    <div
+                        className="fixed bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 min-w-[170px]"
+                        style={{ top: dropdownPos.top, left: dropdownPos.left }}
+                    >
+                        {Object.entries(STATUS_CONFIG).map(([key, config]) => {
+                            const currentJob = jobs.find(j => j.id === showStatusDropdown);
+                            return (
+                                <button key={key} onClick={() => updateStatus(showStatusDropdown, key)} className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-2.5 transition-colors ${currentJob?.status === key ? 'bg-pink-50 text-pink-600 font-medium' : 'text-gray-700'}`}>
+                                    <config.icon className="w-4 h-4" />{config.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
             {/* Delete Confirmation Modal */}
             <DeleteConfirmModal
                 isOpen={deleteModal.isOpen}

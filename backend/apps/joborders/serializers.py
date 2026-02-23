@@ -70,6 +70,8 @@ class JobOrderListSerializer(serializers.ModelSerializer):
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     is_overdue = serializers.SerializerMethodField()
     assigned_worker_names = serializers.SerializerMethodField()
+    progress_percent = serializers.SerializerMethodField()
+    deadline_status = serializers.SerializerMethodField()
     
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
     
@@ -80,8 +82,10 @@ class JobOrderListSerializer(serializers.ModelSerializer):
             'design_name', 'material_type', 'material_type_name',
             'material_quantity', 'material_unit', 'printing_type', 
             'printing_type_name', 'num_colors', 'num_screens', 'screen_charges',
-            'expected_delivery', 'status', 'status_display', 'priority', 'priority_display',
+            'expected_delivery', 'estimated_hours', 'work_started_at',
+            'status', 'status_display', 'priority', 'priority_display',
             'total', 'balance', 'is_overdue', 'assigned_workers', 'assigned_worker_names',
+            'progress_percent', 'deadline_status',
             'invoice', 'invoice_number'
         ]
     
@@ -96,6 +100,30 @@ class JobOrderListSerializer(serializers.ModelSerializer):
     
     def get_assigned_worker_names(self, obj):
         return [w.full_name for w in obj.assigned_workers.all()]
+    
+    def get_progress_percent(self, obj):
+        """Calculate work progress based on elapsed time vs estimated hours"""
+        from django.utils import timezone
+        if not obj.work_started_at or not obj.estimated_hours or float(obj.estimated_hours) == 0:
+            return 0
+        if obj.status in ['ready', 'delivered', 'cancelled']:
+            return 100
+        elapsed = (timezone.now() - obj.work_started_at).total_seconds() / 3600
+        return min(round((elapsed / float(obj.estimated_hours)) * 100), 100)
+    
+    def get_deadline_status(self, obj):
+        """Return deadline status: safe/warning/danger/overdue"""
+        from django.utils import timezone
+        if not obj.expected_delivery or obj.status in ['delivered', 'cancelled']:
+            return 'none'
+        days_left = (obj.expected_delivery - timezone.now().date()).days
+        if days_left < 0:
+            return 'overdue'
+        elif days_left <= 1:
+            return 'danger'
+        elif days_left <= 3:
+            return 'warning'
+        return 'safe'
 
 
 class JobOrderDetailSerializer(serializers.ModelSerializer):
@@ -111,6 +139,8 @@ class JobOrderDetailSerializer(serializers.ModelSerializer):
     status_history = JobStatusHistorySerializer(many=True, read_only=True)
     is_overdue = serializers.SerializerMethodField()
     assigned_worker_names = serializers.SerializerMethodField()
+    progress_percent = serializers.SerializerMethodField()
+    deadline_status = serializers.SerializerMethodField()
     design_image_url = serializers.SerializerMethodField()
     
     class Meta:
@@ -131,6 +161,28 @@ class JobOrderDetailSerializer(serializers.ModelSerializer):
     
     def get_assigned_worker_names(self, obj):
         return [{'id': w.id, 'name': w.full_name} for w in obj.assigned_workers.all()]
+    
+    def get_progress_percent(self, obj):
+        from django.utils import timezone
+        if not obj.work_started_at or not obj.estimated_hours or float(obj.estimated_hours) == 0:
+            return 0
+        if obj.status in ['ready', 'delivered', 'cancelled']:
+            return 100
+        elapsed = (timezone.now() - obj.work_started_at).total_seconds() / 3600
+        return min(round((elapsed / float(obj.estimated_hours)) * 100), 100)
+    
+    def get_deadline_status(self, obj):
+        from django.utils import timezone
+        if not obj.expected_delivery or obj.status in ['delivered', 'cancelled']:
+            return 'none'
+        days_left = (obj.expected_delivery - timezone.now().date()).days
+        if days_left < 0:
+            return 'overdue'
+        elif days_left <= 1:
+            return 'danger'
+        elif days_left <= 3:
+            return 'warning'
+        return 'safe'
     
     def get_design_image_url(self, obj):
         if obj.design_image:

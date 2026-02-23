@@ -186,7 +186,8 @@ class JobOrderViewSet(viewsets.ModelViewSet):
         instance = serializer.save(created_by=self.request.user)
         if instance.assigned_workers.exists() and instance.status == 'received':
             instance.status = 'finishing'
-            instance.save(update_fields=['status'])
+            instance.work_started_at = timezone.now()
+            instance.save(update_fields=['status', 'work_started_at'])
             JobStatusHistory.objects.create(
                 job_order=instance,
                 from_status='received',
@@ -200,7 +201,8 @@ class JobOrderViewSet(viewsets.ModelViewSet):
         instance = serializer.save()
         if instance.assigned_workers.exists() and instance.status == 'received':
             instance.status = 'finishing'
-            instance.save(update_fields=['status'])
+            instance.work_started_at = timezone.now()
+            instance.save(update_fields=['status', 'work_started_at'])
             JobStatusHistory.objects.create(
                 job_order=instance,
                 from_status='received',
@@ -231,6 +233,10 @@ class JobOrderViewSet(viewsets.ModelViewSet):
         
         old_status = job_order.status
         job_order.status = new_status
+        
+        # Auto-set work_started_at when transitioning to finishing
+        if new_status == 'finishing' and not job_order.work_started_at:
+            job_order.work_started_at = timezone.now()
         
         # Update delivery date if delivered
         if new_status == 'delivered' and not job_order.actual_delivery:
@@ -381,8 +387,26 @@ class JobOrderViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        """Get job order statistics"""
+        """Get job order statistics + auto-escalate priority for near-deadline orders"""
         today = timezone.now().date()
+        tomorrow = today + timedelta(days=1)
+        
+        # Auto-escalate: orders due within 1 day that are still 'normal' priority
+        near_deadline_jobs = JobOrder.objects.filter(
+            expected_delivery__lte=tomorrow,
+            status__in=['received', 'finishing'],
+            priority='normal'
+        )
+        for job in near_deadline_jobs:
+            job.priority = 'urgent'
+            job.save(update_fields=['priority'])
+            JobStatusHistory.objects.create(
+                job_order=job,
+                from_status=job.status,
+                to_status=job.status,
+                changed_by=request.user,
+                notes=f'Auto: priority escalated to urgent (deadline {job.expected_delivery})'
+            )
         
         total = JobOrder.objects.count()
         in_progress = JobOrder.objects.filter(
@@ -395,6 +419,11 @@ class JobOrderViewSet(viewsets.ModelViewSet):
         ).count()
         delivered_today = JobOrder.objects.filter(
             actual_delivery=today
+        ).count()
+        deadline_warnings = JobOrder.objects.filter(
+            expected_delivery__lte=today + timedelta(days=3),
+            expected_delivery__gte=today,
+            status__in=['received', 'finishing']
         ).count()
         
         # Revenue stats
@@ -412,6 +441,7 @@ class JobOrderViewSet(viewsets.ModelViewSet):
             'ready': ready,
             'overdue': overdue,
             'delivered_today': delivered_today,
+            'deadline_warnings': deadline_warnings,
             'this_month_value': this_month['total_value'] or 0,
             'this_month_jobs': this_month['total_jobs'] or 0,
         })
