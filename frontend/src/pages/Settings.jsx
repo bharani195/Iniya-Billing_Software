@@ -5,6 +5,7 @@ import {
 } from 'react-icons/fi';
 import { settingsAPI, companyAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import Dropdown from '../components/Dropdown';
 
 const TABS = [
     { id: 'business', label: 'Business Profile', icon: FiBriefcase, color: '#A500FF' },
@@ -403,11 +404,15 @@ export default function Settings() {
                                     </div>
                                     <div className="group">
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Decimal Places</label>
-                                        <select value={settings.decimal_places || '2'} onChange={(e) => updateSetting('decimal_places', e.target.value)} className="input-pro w-full px-4 py-3.5 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-[#10B981] focus:ring-4 focus:ring-[#10B981]/10 outline-none cursor-pointer">
-                                            <option value="0">0 decimal places</option>
-                                            <option value="2">2 decimal places</option>
-                                            <option value="3">3 decimal places</option>
-                                        </select>
+                                        <Dropdown
+                                            options={[
+                                                { value: '0', label: '0 decimal places' },
+                                                { value: '2', label: '2 decimal places' },
+                                                { value: '3', label: '3 decimal places' },
+                                            ]}
+                                            value={settings.decimal_places || '2'}
+                                            onChange={(val) => updateSetting('decimal_places', val)}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -435,13 +440,17 @@ export default function Settings() {
                                     </div>
                                     <div className="group">
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Default Tax Rate</label>
-                                        <select value={settings.default_tax_rate || '5'} onChange={(e) => updateSetting('default_tax_rate', e.target.value)} className="input-pro w-full px-4 py-3.5 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 outline-none cursor-pointer">
-                                            <option value="0">0% (No Tax)</option>
-                                            <option value="5">5% GST</option>
-                                            <option value="12">12% GST</option>
-                                            <option value="18">18% GST</option>
-                                            <option value="28">28% GST</option>
-                                        </select>
+                                        <Dropdown
+                                            options={[
+                                                { value: '0', label: '0% (No Tax)' },
+                                                { value: '5', label: '5% GST' },
+                                                { value: '12', label: '12% GST' },
+                                                { value: '18', label: '18% GST' },
+                                                { value: '28', label: '28% GST' },
+                                            ]}
+                                            value={settings.default_tax_rate || '5'}
+                                            onChange={(val) => updateSetting('default_tax_rate', val)}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -495,12 +504,16 @@ export default function Settings() {
 
                             <div className="group">
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Paper Size</label>
-                                <select value={settings.paper_size || 'A4'} onChange={(e) => updateSetting('paper_size', e.target.value)} className="input-pro w-full px-4 py-3.5 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-[#3B82F6] focus:ring-4 focus:ring-[#3B82F6]/10 outline-none cursor-pointer">
-                                    <option value="A4">A4 (210 × 297 mm)</option>
-                                    <option value="A5">A5 (148 × 210 mm)</option>
-                                    <option value="Letter">Letter (8.5 × 11 in)</option>
-                                    <option value="Thermal">Thermal (80mm roll)</option>
-                                </select>
+                                <Dropdown
+                                    options={[
+                                        { value: 'A4', label: 'A4 (210 × 297 mm)' },
+                                        { value: 'A5', label: 'A5 (148 × 210 mm)' },
+                                        { value: 'Letter', label: 'Letter (8.5 × 11 in)' },
+                                        { value: 'Thermal', label: 'Thermal (80mm roll)' },
+                                    ]}
+                                    value={settings.paper_size || 'A4'}
+                                    onChange={(val) => updateSetting('paper_size', val)}
+                                />
                             </div>
 
                             <label className="toggle-card flex items-center gap-4 p-5 rounded-xl border border-gray-100 bg-gradient-to-r from-gray-50 to-white cursor-pointer">

@@ -208,10 +208,15 @@ export default function Dashboard() {
                             <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
                                 <FiTarget className="w-6 h-6 text-amber-600" />
                             </div>
+                            {(dashboardData?.pending?.overdue_count || 0) > 0 && (
+                                <span className="flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-100 px-2 py-1 rounded-full animate-pulse">
+                                    {dashboardData.pending.overdue_count} overdue
+                                </span>
+                            )}
                         </div>
                         <p className="text-gray-500 text-sm font-medium mb-1">Pending Dues</p>
                         <p className="text-3xl font-bold text-amber-600 animate-count">{formatCurrency(dashboardData?.pending?.receivable)}</p>
-                        <p className="text-xs text-gray-400 mt-1">From customers</p>
+                        <p className="text-xs text-gray-400 mt-1">{dashboardData?.pending?.invoice_count || 0} unpaid invoices</p>
                     </div>
                 </div>
 
@@ -348,33 +353,33 @@ export default function Dashboard() {
                         </Link>
                     </div>
                     <div className="p-4 space-y-3">
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-amber-50 border border-amber-100 hover:shadow-md transition-all">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-white border border-amber-200 flex items-center justify-center shadow-sm">
-                                    <FiClock className="w-6 h-6 text-amber-500" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">Pending</p>
-                                    <p className="text-sm text-gray-500">Awaiting start</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-3xl font-bold text-amber-600">{dashboardData?.job_orders?.pending || 0}</p>
-                            </div>
-                        </div>
-
                         <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50 border border-blue-100 hover:shadow-md transition-all">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-xl bg-white border border-blue-200 flex items-center justify-center shadow-sm">
-                                    <FiLoader className="w-6 h-6 text-blue-500 animate-spin" style={{ animationDuration: '3s' }} />
+                                    <FiBox className="w-6 h-6 text-blue-500" />
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-gray-800">In Progress</p>
-                                    <p className="text-sm text-gray-500">Currently working</p>
+                                    <p className="font-semibold text-gray-800">Received</p>
+                                    <p className="text-sm text-gray-500">Awaiting work</p>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-3xl font-bold text-blue-600">{dashboardData?.job_orders?.in_progress || 0}</p>
+                                <p className="text-3xl font-bold text-blue-600">{dashboardData?.job_orders?.received || 0}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-cyan-50 border border-cyan-100 hover:shadow-md transition-all">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-xl bg-white border border-cyan-200 flex items-center justify-center shadow-sm">
+                                    <FiLoader className="w-6 h-6 text-cyan-500 animate-spin" style={{ animationDuration: '3s' }} />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-gray-800">Finishing</p>
+                                    <p className="text-sm text-gray-500">Work in progress</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-3xl font-bold text-cyan-600">{dashboardData?.job_orders?.finishing || 0}</p>
                             </div>
                         </div>
 
@@ -384,12 +389,12 @@ export default function Dashboard() {
                                     <FiCheckCircle className="w-6 h-6 text-emerald-500" />
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-gray-800">Completed</p>
+                                    <p className="font-semibold text-gray-800">Ready</p>
                                     <p className="text-sm text-gray-500">Ready for delivery</p>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-3xl font-bold text-emerald-600">{dashboardData?.job_orders?.completed || 0}</p>
+                                <p className="text-3xl font-bold text-emerald-600">{dashboardData?.job_orders?.ready || 0}</p>
                             </div>
                         </div>
 

@@ -11,11 +11,11 @@ import {
 import toast from 'react-hot-toast';
 
 const sidebarItems = [
-    { path: '/', icon: FiHome, label: 'Dashboard', color: '#A500FF' }, // Purple
+    { path: '/', icon: FiHome, label: 'Dashboard', color: '#FF0000' }, // Purple
     {
         label: 'Parties',
         icon: FiUsers,
-        color: '#06B6D4', // Cyan
+        color: '#0279f8ff', // Cyan
         children: [
             { path: '/customers', icon: FiUsers, label: 'Customers' },
             { path: '/suppliers', icon: FiTruck, label: 'Suppliers' },
@@ -424,7 +424,7 @@ export default function Layout() {
                         <NavLink
                             to="/customers/add"
                             className="flex items-center justify-center gap-2 w-full py-3 px-4
-                                bg-[#A500FF]
+                                bg-[#2600ffff]
                                 text-white font-semibold text-sm rounded-xl
                                 shadow-[0_0_25px_rgba(165,0,255,0.4)]
                                 hover:shadow-[0_0_35px_rgba(165,0,255,0.6)] hover:-translate-y-0.5

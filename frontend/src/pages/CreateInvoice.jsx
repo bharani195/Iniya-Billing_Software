@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
     FiFileText, FiUser, FiArrowLeft, FiArrowRight, FiPlus, FiTrash2, FiSave, FiCalendar, FiCheck, FiClipboard
 } from 'react-icons/fi';
+import DatePicker from '../components/DatePicker';
 import toast from 'react-hot-toast';
 import { invoicesAPI, customersAPI } from '../services/api';
 
@@ -303,7 +304,7 @@ export default function CreateInvoice() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Customer & Date Details */}
-                <div className="glass-card rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="glass-card rounded-2xl p-6 shadow-sm border border-gray-100" style={{ position: 'relative', zIndex: 30, overflow: 'visible' }}>
                     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <FiUser className="w-5 h-5 text-blue-600" />
                         Invoice Details
@@ -323,30 +324,26 @@ export default function CreateInvoice() {
                                 required
                             />
                         </div>
-                        <div>
+                        <div style={{ position: 'relative', zIndex: 20 }}>
                             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                                 <FiCalendar className="w-4 h-4" />
                                 Invoice Date
                             </label>
-                            <input
-                                type="date"
-                                name="invoice_date"
+                            <DatePicker
                                 value={formData.invoice_date}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                onChange={(val) => setFormData(prev => ({ ...prev, invoice_date: val }))}
+                                placeholder="Select invoice date"
                             />
                         </div>
-                        <div>
+                        <div style={{ position: 'relative', zIndex: 10 }}>
                             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                                 <FiCalendar className="w-4 h-4" />
                                 Due Date
                             </label>
-                            <input
-                                type="date"
-                                name="due_date"
+                            <DatePicker
                                 value={formData.due_date}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                onChange={(val) => setFormData(prev => ({ ...prev, due_date: val }))}
+                                placeholder="Select due date"
                             />
                         </div>
                     </div>

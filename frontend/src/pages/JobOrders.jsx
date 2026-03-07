@@ -4,9 +4,11 @@ import {
     FiEdit2, FiTrash2, FiClock, FiCheckCircle, FiAlertCircle,
     FiTruck, FiRefreshCw, FiChevronDown, FiFilter, FiAlertTriangle, FiUsers, FiZap
 } from 'react-icons/fi';
+import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { jobordersAPI } from '../services/api';
+import { jobordersAPI, staffAPI } from '../services/api';
+import Dropdown from '../components/Dropdown';
 
 const STATUS_CONFIG = {
     received: { label: 'Received', color: 'bg-blue-100 text-blue-700', icon: FiClipboard },
@@ -229,12 +231,15 @@ export default function JobOrders() {
                                 <input type="text" placeholder="Search by order number, customer, design..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent border-none outline-none w-full text-gray-700" />
                             </div>
                         </form>
-                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-pink-500 outline-none min-w-[140px]">
-                            <option value="">All Status</option>
-                            {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                                <option key={key} value={key}>{config.label}</option>
-                            ))}
-                        </select>
+                        <Dropdown
+                            className="min-w-[140px]"
+                            options={[
+                                { value: '', label: 'All Status' },
+                                ...Object.entries(STATUS_CONFIG).map(([key, config]) => ({ value: key, label: config.label }))
+                            ]}
+                            value={statusFilter}
+                            onChange={(val) => setStatusFilter(val)}
+                        />
                     </div>
                     <div className="flex flex-wrap gap-2 mt-4">
                         {['', 'received', 'finishing', 'ready', 'delivered'].map(status => (

@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Sum
+from django.db.models import ProtectedError
 from .models import Customer
 from .serializers import CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer
 
@@ -43,6 +44,18 @@ class CustomerViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(current_balance__gt=0)
         
         return queryset.order_by('name')
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete customer - handle protected references gracefully"""
+        customer = self.get_object()
+        try:
+            customer.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ProtectedError:
+            return Response(
+                {'error': 'Cannot delete customer with existing invoices or payments. Remove linked records first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     @action(detail=False, methods=['get'])
     def dropdown(self, request):

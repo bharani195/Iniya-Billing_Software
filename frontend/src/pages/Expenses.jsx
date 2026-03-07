@@ -3,6 +3,8 @@ import { FiPlus, FiCreditCard, FiX, FiTrash2, FiAlertTriangle } from 'react-icon
 import { purchasesAPI } from '../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import DatePicker from '../components/DatePicker';
+import Dropdown from '../components/Dropdown';
 
 const Modal = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
@@ -208,9 +210,11 @@ export default function Expenses() {
                     <div className="p-5 space-y-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
-                            <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-orange-500 outline-none">
-                                {categories.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-                            </select>
+                            <Dropdown
+                                options={categories.map(c => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))}
+                                value={formData.category}
+                                onChange={(val) => setFormData({ ...formData, category: val })}
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Description *</label>
@@ -223,14 +227,16 @@ export default function Expenses() {
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
-                                <select value={formData.payment_mode} onChange={(e) => setFormData({ ...formData, payment_mode: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-orange-500 outline-none">
-                                    {modes.map(m => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-                                </select>
+                                <Dropdown
+                                    options={modes.map(m => ({ value: m, label: m.toUpperCase() }))}
+                                    value={formData.payment_mode}
+                                    onChange={(val) => setFormData({ ...formData, payment_mode: val })}
+                                />
                             </div>
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
-                            <input type="date" value={formData.expense_date} onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-orange-500 outline-none" />
+                            <DatePicker value={formData.expense_date} onChange={(val) => setFormData({ ...formData, expense_date: val })} placeholder="Select expense date" />
                         </div>
                         {formData.category === 'wastage' && (
                             <div className="p-4 bg-red-50 rounded-xl border border-red-200 space-y-3">
@@ -246,16 +252,21 @@ export default function Expenses() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1">Unit</label>
-                                        <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-white border-2 border-red-100 focus:border-red-400 outline-none">
-                                            <option value="">Select</option>
-                                            <option value="sheets">Sheets</option>
-                                            <option value="pcs">Pieces</option>
-                                            <option value="kg">Kg</option>
-                                            <option value="liters">Liters</option>
-                                            <option value="rolls">Rolls</option>
-                                            <option value="plates">Plates</option>
-                                            <option value="reams">Reams</option>
-                                        </select>
+                                        <Dropdown
+                                            options={[
+                                                { value: '', label: 'Select' },
+                                                { value: 'sheets', label: 'Sheets' },
+                                                { value: 'pcs', label: 'Pieces' },
+                                                { value: 'kg', label: 'Kg' },
+                                                { value: 'liters', label: 'Liters' },
+                                                { value: 'rolls', label: 'Rolls' },
+                                                { value: 'plates', label: 'Plates' },
+                                                { value: 'reams', label: 'Reams' },
+                                            ]}
+                                            value={formData.unit}
+                                            onChange={(val) => setFormData({ ...formData, unit: val })}
+                                            placeholder="Select unit"
+                                        />
                                     </div>
                                 </div>
                             </div>

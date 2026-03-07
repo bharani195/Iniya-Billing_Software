@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import {
     FiUsers, FiCalendar, FiFileText, FiPlus, FiTrash2, FiX, FiEdit2,
     FiCheck, FiDollarSign, FiDownload, FiAlertTriangle, FiClock,
-    FiUserCheck, FiUserX, FiStar, FiRefreshCw
+    FiUserCheck, FiUserX, FiStar, FiRefreshCw, FiSun
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { staffAPI } from '../services/api';
+import DatePicker from '../components/DatePicker';
+import Dropdown from '../components/Dropdown';
 import { format } from 'date-fns';
 
 // Reusable Modal
@@ -81,9 +83,16 @@ export default function StaffManagement() {
     const [paySlips, setPaySlips] = useState([]);
     const [monthlySummary, setMonthlySummary] = useState(null);
 
+    // Holidays
+    const [holidays, setHolidays] = useState([]);
+    const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
+    const [showAddHoliday, setShowAddHoliday] = useState(false);
+    const [holidayForm, setHolidayForm] = useState({ name: '', date: '', holiday_type: 'government' });
+
     useEffect(() => { fetchStaff(); }, []);
     useEffect(() => { if (activeTab === 'attendance') fetchAttendance(); }, [activeTab, attendanceDate]);
     useEffect(() => { if (activeTab === 'payslips') { fetchPaySlips(); fetchMonthlySummary(); } }, [activeTab, paySlipMonth, paySlipYear]);
+    useEffect(() => { if (activeTab === 'holidays') fetchHolidays(); }, [activeTab, holidayYear]);
 
     const fetchStaff = async () => {
         setLoading(true);
@@ -151,17 +160,28 @@ export default function StaffManagement() {
 
     const handleStaffSubmit = async (e) => {
         e.preventDefault();
+        // Clean form data — convert empty strings to proper defaults
+        const cleanData = {
+            ...staffForm,
+            daily_rate: staffForm.daily_rate === '' ? 0 : staffForm.daily_rate,
+            monthly_salary: staffForm.monthly_salary === '' ? 0 : staffForm.monthly_salary,
+            joining_date: staffForm.joining_date || null,
+        };
         try {
             if (editingStaff) {
-                await staffAPI.update(editingStaff.id, staffForm);
+                await staffAPI.update(editingStaff.id, cleanData);
                 toast.success('Staff updated');
             } else {
-                await staffAPI.create(staffForm);
+                await staffAPI.create(cleanData);
                 toast.success('Staff added');
             }
             setShowStaffModal(false);
             fetchStaff();
-        } catch { toast.error('Failed to save staff'); }
+        } catch (err) {
+            const detail = err.response?.data;
+            const msg = detail ? Object.values(detail).flat().join(', ') : 'Failed to save staff';
+            toast.error(msg);
+        }
     };
 
     const handleDeleteStaff = async () => {
@@ -245,6 +265,56 @@ export default function StaffManagement() {
         } catch { toast.error('Failed to delete'); }
     };
 
+    // ===== Holiday Functions =====
+    const fetchHolidays = async () => {
+        try {
+            const res = await staffAPI.getHolidays({ year: holidayYear });
+            setHolidays(res.data.results || res.data);
+        } catch { toast.error('Failed to fetch holidays'); }
+    };
+
+    const addHoliday = async (e) => {
+        e.preventDefault();
+        try {
+            await staffAPI.createHoliday(holidayForm);
+            toast.success('Holiday added');
+            setShowAddHoliday(false);
+            setHolidayForm({ name: '', date: '', holiday_type: 'government' });
+            fetchHolidays();
+        } catch (err) {
+            const detail = err.response?.data;
+            toast.error(detail ? Object.values(detail).flat().join(', ') : 'Failed to add holiday');
+        }
+    };
+
+    const deleteHoliday = async (id) => {
+        try {
+            await staffAPI.deleteHoliday(id);
+            toast.success('Holiday removed');
+            fetchHolidays();
+        } catch { toast.error('Failed to delete holiday'); }
+    };
+
+    const loadDefaultHolidays = async () => {
+        const y = holidayYear;
+        const defaults = [
+            { name: 'New Year', date: `${y}-01-01`, holiday_type: 'festival' },
+            { name: 'Pongal', date: `${y}-01-14`, holiday_type: 'festival' },
+            { name: 'Pongal (Day 2)', date: `${y}-01-15`, holiday_type: 'festival' },
+            { name: 'Republic Day', date: `${y}-01-26`, holiday_type: 'government' },
+            { name: 'May Day', date: `${y}-05-01`, holiday_type: 'government' },
+            { name: 'Independence Day', date: `${y}-08-15`, holiday_type: 'government' },
+            { name: 'Gandhi Jayanti', date: `${y}-10-02`, holiday_type: 'government' },
+            { name: 'Diwali', date: `${y}-10-20`, holiday_type: 'festival' },
+            { name: 'Christmas', date: `${y}-12-25`, holiday_type: 'festival' },
+        ];
+        try {
+            const res = await staffAPI.bulkCreateHolidays({ holidays: defaults });
+            toast.success(res.data.message);
+            fetchHolidays();
+        } catch { toast.error('Failed to load holidays'); }
+    };
+
     const formatCurrency = (a) => `₹${parseFloat(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
 
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -257,8 +327,8 @@ export default function StaffManagement() {
     ];
 
     const roleColors = {
-        printer: '#3B82F6', helper: '#F59E0B', designer: '#EC4899',
-        driver: '#10B981', binder: '#8B5CF6', operator: '#06B6D4',
+        helper: '#F59E0B', designer: '#EC4899',
+        driver: '#10B981', operator: '#06B6D4',
         manager: '#EF4444', other: '#6B7280',
     };
 
@@ -266,6 +336,7 @@ export default function StaffManagement() {
         { id: 'staff', label: 'Staff List', icon: FiUsers },
         { id: 'attendance', label: 'Attendance', icon: FiCalendar },
         { id: 'payslips', label: 'Pay Slips', icon: FiFileText },
+        { id: 'holidays', label: 'Holidays', icon: FiSun },
     ];
 
     const activeStaff = staffList.filter(s => s.is_active);
@@ -478,11 +549,10 @@ export default function StaffManagement() {
                                 <p className="text-xs text-gray-500">{activeStaff.length} active staff</p>
                             </div>
                         </div>
-                        <input
-                            type="date"
+                        <DatePicker
                             value={attendanceDate}
-                            onChange={(e) => setAttendanceDate(e.target.value)}
-                            className="input-staff px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-violet-500 outline-none text-sm font-semibold bg-white"
+                            onChange={(val) => setAttendanceDate(val)}
+                            placeholder="Select date"
                         />
                     </div>
                     <div className="overflow-x-auto">
@@ -586,15 +656,12 @@ export default function StaffManagement() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3 ml-auto">
-                            <select
+                            <Dropdown
+                                className="min-w-[140px]"
+                                options={monthNames.map((m, i) => ({ value: i + 1, label: m }))}
                                 value={paySlipMonth}
-                                onChange={(e) => setPaySlipMonth(parseInt(e.target.value))}
-                                className="input-staff px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-emerald-400 outline-none text-sm font-semibold bg-white"
-                            >
-                                {monthNames.map((m, i) => (
-                                    <option key={i + 1} value={i + 1}>{m}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setPaySlipMonth(parseInt(val))}
+                            />
                             <input
                                 type="number"
                                 value={paySlipYear}
@@ -706,6 +773,140 @@ export default function StaffManagement() {
                 </div>
             )}
 
+            {/* ═══════ HOLIDAYS TAB ═══════ */}
+            {activeTab === 'holidays' && (
+                <div className="space-y-5">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-lg font-bold text-gray-800">Holiday Calendar</h3>
+                            <Dropdown
+                                className="min-w-[100px]"
+                                options={[...Array(5)].map((_, i) => { const y = new Date().getFullYear() - 1 + i; return { value: y, label: String(y) }; })}
+                                value={holidayYear}
+                                onChange={(val) => setHolidayYear(parseInt(val))}
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={loadDefaultHolidays}
+                                className="px-4 py-2.5 bg-amber-50 text-amber-700 rounded-xl text-sm font-bold hover:bg-amber-100 transition-colors flex items-center gap-2 border border-amber-200">
+                                <FiStar className="w-4 h-4" /> Load Indian Holidays
+                            </button>
+                            <button onClick={() => setShowAddHoliday(true)}
+                                className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-sm font-bold hover:shadow-lg transition-all flex items-center gap-2">
+                                <FiPlus className="w-4 h-4" /> Add Holiday
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Holiday Stats */}
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                            <p className="text-xs text-gray-500 font-medium">Total Holidays</p>
+                            <p className="text-2xl font-bold text-violet-600 mt-1">{holidays.length}</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                            <p className="text-xs text-gray-500 font-medium">Government</p>
+                            <p className="text-2xl font-bold text-blue-600 mt-1">{holidays.filter(h => h.holiday_type === 'government').length}</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                            <p className="text-xs text-gray-500 font-medium">Festival</p>
+                            <p className="text-2xl font-bold text-pink-600 mt-1">{holidays.filter(h => h.holiday_type === 'festival').length}</p>
+                        </div>
+                    </div>
+
+                    {/* Holiday List by Month */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        {(() => {
+                            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                            const grouped = {};
+                            holidays.forEach(h => {
+                                const m = new Date(h.date).getMonth();
+                                if (!grouped[m]) grouped[m] = [];
+                                grouped[m].push(h);
+                            });
+                            const monthsWithHolidays = Object.keys(grouped).sort((a, b) => a - b);
+                            if (monthsWithHolidays.length === 0) {
+                                return (
+                                    <div className="text-center py-16">
+                                        <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                                            <FiSun className="w-8 h-8 text-gray-400" />
+                                        </div>
+                                        <p className="text-gray-500 font-medium">No holidays added for {holidayYear}.</p>
+                                        <p className="text-gray-400 text-sm mt-1">Click "Load Indian Holidays" to get started.</p>
+                                    </div>
+                                );
+                            }
+                            return monthsWithHolidays.map(m => (
+                                <div key={m}>
+                                    <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
+                                        <h4 className="font-bold text-gray-700 text-sm">{months[m]} {holidayYear}</h4>
+                                    </div>
+                                    {grouped[m].map(h => {
+                                        const typeColors = { government: 'bg-blue-100 text-blue-700', festival: 'bg-pink-100 text-pink-700', company: 'bg-green-100 text-green-700' };
+                                        const dayName = new Date(h.date).toLocaleDateString('en-IN', { weekday: 'short' });
+                                        const dayNum = new Date(h.date).getDate();
+                                        return (
+                                            <div key={h.id} className="flex items-center justify-between px-6 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-xl bg-violet-50 flex flex-col items-center justify-center text-violet-600">
+                                                        <span className="text-xs font-medium leading-none">{dayName}</span>
+                                                        <span className="text-lg font-bold leading-none mt-0.5">{dayNum}</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-gray-800">{h.name}</p>
+                                                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold mt-1 ${typeColors[h.holiday_type] || 'bg-gray-100 text-gray-600'}`}>
+                                                            {h.holiday_type_display}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => deleteHoliday(h.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                                                    <FiTrash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ));
+                        })()}
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════ Add Holiday Modal ═══════ */}
+            <Modal isOpen={showAddHoliday} onClose={() => setShowAddHoliday(false)} title="Add Holiday">
+                <form onSubmit={addHoliday} className="p-5 space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Holiday Name *</label>
+                        <input type="text" value={holidayForm.name} onChange={e => setHolidayForm({ ...holidayForm, name: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-violet-500 outline-none"
+                            placeholder="e.g. Pongal, Republic Day" required />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
+                            <DatePicker value={holidayForm.date} onChange={(val) => setHolidayForm({ ...holidayForm, date: val })} placeholder="Select holiday date" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Type</label>
+                            <Dropdown
+                                options={[
+                                    { value: 'government', label: 'Government Holiday' },
+                                    { value: 'festival', label: 'Festival Holiday' },
+                                    { value: 'company', label: 'Company Holiday' },
+                                ]}
+                                value={holidayForm.holiday_type}
+                                onChange={(val) => setHolidayForm({ ...holidayForm, holiday_type: val })}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                        <button type="button" onClick={() => setShowAddHoliday(false)} className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl font-medium transition-colors">Cancel</button>
+                        <button type="submit" className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg transition-all">Add Holiday</button>
+                    </div>
+                </form>
+            </Modal>
+
             {/* ═══════ Add/Edit Staff Modal ═══════ */}
             <Modal isOpen={showStaffModal} onClose={() => setShowStaffModal(false)} title={editingStaff ? 'Edit Staff Member' : 'Add Staff Member'} wide>
                 <form onSubmit={handleStaffSubmit}>
@@ -725,25 +926,29 @@ export default function StaffManagement() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
-                                <select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
-                                    className="input-staff w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-violet-500 outline-none">
-                                    <option value="printer">Printer</option>
-                                    <option value="helper">Helper</option>
-                                    <option value="designer">Designer</option>
-                                    <option value="driver">Driver</option>
-                                    <option value="binder">Binder</option>
-                                    <option value="operator">Machine Operator</option>
-                                    <option value="manager">Manager</option>
-                                    <option value="other">Other</option>
-                                </select>
+                                <Dropdown
+                                    options={[
+                                        { value: 'helper', label: 'Helper' },
+                                        { value: 'designer', label: 'Designer' },
+                                        { value: 'driver', label: 'Driver' },
+                                        { value: 'operator', label: 'Machine Operator' },
+                                        { value: 'manager', label: 'Manager' },
+                                        { value: 'other', label: 'Other' },
+                                    ]}
+                                    value={staffForm.role}
+                                    onChange={(val) => setStaffForm({ ...staffForm, role: val })}
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Salary Type</label>
-                                <select value={staffForm.salary_type} onChange={(e) => setStaffForm({ ...staffForm, salary_type: e.target.value })}
-                                    className="input-staff w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-violet-500 outline-none">
-                                    <option value="daily">Daily Wage</option>
-                                    <option value="monthly">Monthly Salary</option>
-                                </select>
+                                <Dropdown
+                                    options={[
+                                        { value: 'daily', label: 'Daily Wage' },
+                                        { value: 'monthly', label: 'Monthly Salary' },
+                                    ]}
+                                    value={staffForm.salary_type}
+                                    onChange={(val) => setStaffForm({ ...staffForm, salary_type: val })}
+                                />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -762,8 +967,7 @@ export default function StaffManagement() {
                             )}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Joining Date</label>
-                                <input type="date" value={staffForm.joining_date} onChange={(e) => setStaffForm({ ...staffForm, joining_date: e.target.value })}
-                                    className="input-staff w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-violet-500 outline-none" />
+                                <DatePicker value={staffForm.joining_date} onChange={(val) => setStaffForm({ ...staffForm, joining_date: val })} placeholder="Select joining date" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">

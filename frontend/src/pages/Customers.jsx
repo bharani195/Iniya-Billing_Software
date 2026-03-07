@@ -124,9 +124,10 @@ export default function Customers() {
             await customersAPI.delete(deleteModal.customer.id);
             toast.success('Customer deleted');
             fetchCustomers();
-            closeDeleteModal();
         } catch (error) {
-            toast.error('Cannot delete customer with existing invoices');
+            toast.error(error.response?.data?.error || 'Cannot delete customer with existing invoices');
+        } finally {
+            closeDeleteModal();
         }
     };
 

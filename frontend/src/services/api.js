@@ -180,6 +180,8 @@ export const reportsAPI = {
     getGST: (params) => api.get('/reports/gst/', { params }),
     getStock: () => api.get('/reports/stock/'),
     getDashboard: () => api.get('/reports/dashboard/'),
+    getStaffSalary: (params) => api.get('/reports/staff-salary/', { params }),
+    downloadStaffSalaryExcel: (params) => api.get('/reports/staff-salary/excel/', { params, responseType: 'blob' }),
 };
 
 // Notifications API (for real-time alerts)
@@ -280,6 +282,12 @@ export const staffAPI = {
     bulkAssign: (data) => api.post('/staff/assignments/bulk_assign/', data),
     updateAssignmentStatus: (id, data) => api.post(`/staff/assignments/${id}/update_status/`, data),
     deleteAssignment: (id) => api.delete(`/staff/assignments/${id}/`),
+    // Holidays
+    getHolidays: (params) => api.get('/staff/holidays/', { params }),
+    createHoliday: (data) => api.post('/staff/holidays/', data),
+    deleteHoliday: (id) => api.delete(`/staff/holidays/${id}/`),
+    bulkCreateHolidays: (data) => api.post('/staff/holidays/bulk_create/', data),
+    getHolidaysByMonth: (params) => api.get('/staff/holidays/by_month/', { params }),
 };
 
 export default api;

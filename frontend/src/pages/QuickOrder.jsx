@@ -7,6 +7,8 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { customersAPI, jobordersAPI } from '../services/api';
+import DatePicker from '../components/DatePicker';
+import Dropdown from '../components/Dropdown';
 
 const STEPS = [
     { id: 1, title: 'Customer Details', icon: FiUsers, color: 'from-cyan-500 to-blue-500' },
@@ -433,16 +435,15 @@ export default function QuickOrder() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                                    <select
-                                        name="material_unit"
+                                    <Dropdown
+                                        options={[
+                                            { value: 'MTR', label: 'Meters' },
+                                            { value: 'PCS', label: 'Pieces' },
+                                            { value: 'ROLL', label: 'Rolls' },
+                                        ]}
                                         value={orderData.material_unit}
-                                        onChange={handleOrderChange}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all"
-                                    >
-                                        <option value="MTR">Meters</option>
-                                        <option value="PCS">Pieces</option>
-                                        <option value="ROLL">Rolls</option>
-                                    </select>
+                                        onChange={(val) => setOrderData(prev => ({ ...prev, material_unit: val }))}
+                                    />
                                 </div>
                             </div>
                             <div>
@@ -461,26 +462,23 @@ export default function QuickOrder() {
                                     <FiCalendar className="inline w-4 h-4 mr-1" />
                                     Expected Delivery
                                 </label>
-                                <input
-                                    type="date"
-                                    name="expected_delivery"
+                                <DatePicker
                                     value={orderData.expected_delivery}
-                                    onChange={handleOrderChange}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all"
+                                    onChange={(val) => setOrderData(prev => ({ ...prev, expected_delivery: val }))}
+                                    placeholder="Select delivery date"
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                                <select
-                                    name="priority"
+                                <Dropdown
+                                    options={[
+                                        { value: 'normal', label: 'Normal' },
+                                        { value: 'urgent', label: 'Urgent' },
+                                        { value: 'express', label: 'Express' },
+                                    ]}
                                     value={orderData.priority}
-                                    onChange={handleOrderChange}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all"
-                                >
-                                    <option value="normal">Normal</option>
-                                    <option value="urgent">Urgent</option>
-                                    <option value="express">Express</option>
-                                </select>
+                                    onChange={(val) => setOrderData(prev => ({ ...prev, priority: val }))}
+                                />
                             </div>
                         </div>
 

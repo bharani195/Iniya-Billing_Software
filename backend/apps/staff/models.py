@@ -6,11 +6,9 @@ class Staff(models.Model):
     """Staff Member Model"""
     
     ROLE_CHOICES = [
-        ('printer', 'Printer'),
         ('helper', 'Helper'),
         ('designer', 'Designer'),
         ('driver', 'Driver'),
-        ('binder', 'Binder'),
         ('operator', 'Machine Operator'),
         ('manager', 'Manager'),
         ('other', 'Other'),
@@ -97,6 +95,8 @@ class PaySlip(models.Model):
     half_days = models.IntegerField(default=0)
     days_absent = models.IntegerField(default=0)
     leaves = models.IntegerField(default=0)
+    sundays = models.IntegerField(default=0)
+    holidays_count = models.IntegerField(default=0)
     
     overtime_hours = models.DecimalField(max_digits=6, decimal_places=1, default=0)
     overtime_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -154,3 +154,29 @@ class WorkerAssignment(models.Model):
     
     def __str__(self):
         return f"{self.staff.name} → {self.job_order.job_number}"
+
+
+class Holiday(models.Model):
+    """Government & Festival Holidays - tracked per year"""
+    
+    TYPE_CHOICES = [
+        ('government', 'Government Holiday'),
+        ('festival', 'Festival Holiday'),
+        ('company', 'Company Holiday'),
+    ]
+    
+    name = models.CharField(max_length=200)
+    date = models.DateField()
+    holiday_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='government')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'staff_holidays'
+        verbose_name = 'Holiday'
+        verbose_name_plural = 'Holidays'
+        ordering = ['date']
+        unique_together = ['name', 'date']
+    
+    def __str__(self):
+        return f"{self.name} - {self.date} ({self.get_holiday_type_display()})"

@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -6,13 +6,14 @@ from django.db.models import Sum, Count, Q
 from django.http import HttpResponse
 from decimal import Decimal
 import calendar
-from datetime import date
+from datetime import date, timedelta
 
-from .models import Staff, Attendance, PaySlip, WorkerAssignment
+from .models import Staff, Attendance, PaySlip, WorkerAssignment, Holiday
 from .serializers import (
     StaffSerializer, StaffListSerializer,
     AttendanceSerializer, BulkAttendanceSerializer,
-    PaySlipSerializer, WorkerAssignmentSerializer
+    PaySlipSerializer, WorkerAssignmentSerializer,
+    HolidaySerializer
 )
 
 
@@ -193,48 +194,76 @@ class PaySlipViewSet(viewsets.ModelViewSet):
         if existing:
             return Response({'error': 'Pay slip already exists for this month', 'id': existing.id}, status=400)
         
-        # Calculate from attendance
+        # ===== Count calendar days, Sundays, and Holidays =====
+        days_in_month = calendar.monthrange(year, month)[1]
+        
+        # Count Sundays in the month
+        sundays = 0
+        for day in range(1, days_in_month + 1):
+            if date(year, month, day).weekday() == 6:  # Sunday = 6
+                sundays += 1
+        
+        # Count holidays from Holiday model for this month
+        holidays_in_month = Holiday.objects.filter(
+            date__month=month, date__year=year
+        )
+        # Exclude holidays that fall on Sunday (already counted)
+        holidays_count = 0
+        for h in holidays_in_month:
+            if h.date.weekday() != 6:  # Not a Sunday
+                holidays_count += 1
+        
+        # Actual working days = Calendar - Sundays - Holidays
+        actual_working_days = days_in_month - sundays - holidays_count
+        
+        # ===== Attendance counts =====
         records = Attendance.objects.filter(staff=staff, date__month=month, date__year=year)
         days_present = records.filter(status='present').count()
         half_days = records.filter(status='half_day').count()
         days_absent = records.filter(status='absent').count()
-        leaves = records.filter(status='leave').count()
+        leaves = records.filter(status='leave').count()  # Paid leave — no deduction
         overtime_hours = records.aggregate(total=Sum('overtime_hours'))['total'] or Decimal('0')
         
-        # Total working days in month
-        total_working_days = days_present + half_days + days_absent
-        
-        # Calculate salary
+        # ===== Calculate salary =====
         if staff.salary_type == 'daily':
+            # Daily wage: pay only for days worked
             effective_days = Decimal(str(days_present)) + (Decimal(str(half_days)) * Decimal('0.5'))
             gross_salary = effective_days * staff.daily_rate
             overtime_rate = staff.daily_rate / Decimal('8')  # per hour
             overtime_amount = overtime_hours * overtime_rate
+            deductions = Decimal('0')
         else:
-            # Monthly: deduct for absent days
-            days_in_month = calendar.monthrange(year, month)[1]
-            per_day = staff.monthly_salary / Decimal(str(days_in_month))
+            # Monthly salary: deduct only for absent days
+            # Per day = Monthly Salary ÷ Actual Working Days
+            if actual_working_days > 0:
+                per_day = staff.monthly_salary / Decimal(str(actual_working_days))
+            else:
+                per_day = Decimal('0')
+            
             absent_deduction = Decimal(str(days_absent)) * per_day
             half_day_deduction = Decimal(str(half_days)) * per_day * Decimal('0.5')
-            gross_salary = staff.monthly_salary - absent_deduction - half_day_deduction
-            overtime_rate = per_day / Decimal('8')
+            deductions = absent_deduction + half_day_deduction
+            gross_salary = staff.monthly_salary
+            overtime_rate = per_day / Decimal('8') if per_day > 0 else Decimal('0')
             overtime_amount = overtime_hours * overtime_rate
         
-        net_salary = gross_salary + overtime_amount
+        net_salary = gross_salary - deductions + overtime_amount
         
         payslip = PaySlip.objects.create(
             staff=staff,
             month=month,
             year=year,
-            total_working_days=total_working_days,
+            total_working_days=actual_working_days,
             days_present=days_present,
             half_days=half_days,
             days_absent=days_absent,
             leaves=leaves,
+            sundays=sundays,
+            holidays_count=holidays_count,
             overtime_hours=overtime_hours,
             overtime_amount=round(overtime_amount, 2),
             gross_salary=round(gross_salary, 2),
-            deductions=0,
+            deductions=round(deductions, 2),
             net_salary=round(net_salary, 2),
         )
         
@@ -355,3 +384,71 @@ class WorkerAssignmentViewSet(viewsets.ModelViewSet):
         assignment.save()
         return Response(WorkerAssignmentSerializer(assignment).data)
 
+
+class HolidayViewSet(viewsets.ModelViewSet):
+    """ViewSet for Holiday CRUD — Government & Festival holidays"""
+    queryset = Holiday.objects.all()
+    serializer_class = HolidaySerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        year = self.request.query_params.get('year')
+        month = self.request.query_params.get('month')
+        if year:
+            queryset = queryset.filter(date__year=int(year))
+        if month:
+            queryset = queryset.filter(date__month=int(month))
+        return queryset
+    
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """Add multiple holidays at once"""
+        holidays_data = request.data.get('holidays', [])
+        if not holidays_data:
+            return Response({'error': 'No holidays provided'}, status=400)
+        
+        created = []
+        skipped = []
+        for h in holidays_data:
+            name = h.get('name', '')
+            date_str = h.get('date', '')
+            holiday_type = h.get('holiday_type', 'government')
+            
+            if not name or not date_str:
+                continue
+            
+            try:
+                from datetime import datetime
+                holiday_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                continue
+            
+            obj, was_created = Holiday.objects.get_or_create(
+                name=name,
+                date=holiday_date,
+                defaults={'holiday_type': holiday_type}
+            )
+            if was_created:
+                created.append(HolidaySerializer(obj).data)
+            else:
+                skipped.append(name)
+        
+        return Response({
+            'message': f'{len(created)} holiday(s) added, {len(skipped)} already exist',
+            'created': created,
+            'skipped': skipped,
+        }, status=201)
+    
+    @action(detail=False, methods=['get'])
+    def by_month(self, request):
+        """Get holidays grouped by month for a given year"""
+        year = int(request.query_params.get('year', date.today().year))
+        holidays = Holiday.objects.filter(date__year=year)
+        
+        monthly = {}
+        for m in range(1, 13):
+            month_holidays = holidays.filter(date__month=m)
+            monthly[calendar.month_name[m]] = HolidaySerializer(month_holidays, many=True).data
+        
+        return Response({'year': year, 'months': monthly})

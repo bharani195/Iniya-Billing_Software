@@ -3,6 +3,8 @@ import { FiPlus, FiShoppingCart, FiX } from 'react-icons/fi';
 import { purchasesAPI, suppliersAPI } from '../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import DatePicker from '../components/DatePicker';
+import Dropdown from '../components/Dropdown';
 
 const Modal = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
@@ -89,13 +91,13 @@ export default function Purchases() {
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Purchase">
                 <form onSubmit={handleSubmit}>
                     <div className="modal-body space-y-4">
-                        <div><label className="label">Supplier *</label><select value={formData.supplier} onChange={(e) => setFormData({ ...formData, supplier: e.target.value })} required className="select"><option value="">Select</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+                        <div><label className="label">Supplier *</label><Dropdown options={[{ value: '', label: 'Select' }, ...suppliers.map(s => ({ value: s.id, label: s.name }))]} value={formData.supplier} onChange={(val) => setFormData({ ...formData, supplier: val })} placeholder="Select supplier" /></div>
                         <div className="grid grid-cols-2 gap-4">
                             <div><label className="label">Purchase #</label><input type="text" value={formData.purchase_number} onChange={(e) => setFormData({ ...formData, purchase_number: e.target.value })} className="input" /></div>
                             <div><label className="label">Bill #</label><input type="text" value={formData.bill_number} onChange={(e) => setFormData({ ...formData, bill_number: e.target.value })} className="input" /></div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div><label className="label">Date</label><input type="date" value={formData.purchase_date} onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })} className="input" /></div>
+                            <div><label className="label">Date</label><DatePicker value={formData.purchase_date} onChange={(val) => setFormData({ ...formData, purchase_date: val })} /></div>
                             <div><label className="label">Total *</label><input type="number" required min="0" step="0.01" value={formData.total} onChange={(e) => setFormData({ ...formData, total: e.target.value })} className="input" /></div>
                         </div>
                         <div><label className="label">Notes</label><textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="input" rows={2} /></div>

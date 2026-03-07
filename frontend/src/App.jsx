@@ -6,7 +6,6 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import Suppliers from './pages/Suppliers';
-import Products from './pages/Products';
 import CreateInvoice from './pages/CreateInvoice';
 import Invoices from './pages/Invoices';
 import Payments from './pages/Payments';
@@ -77,7 +76,6 @@ function AppRoutes() {
                 <Route path="customers" element={<Customers />} />
                 <Route path="customers/add" element={<AddCustomer />} />
                 <Route path="suppliers" element={<Suppliers />} />
-                <Route path="products" element={<Products />} />
                 <Route path="joborders" element={<JobOrders />} />
                 <Route path="joborders/create" element={<CreateJobOrder />} />
                 <Route path="joborders/:id" element={<CreateJobOrder />} />
@@ -106,7 +104,7 @@ function AppRoutes() {
 
 function App() {
     return (
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
                 <AppRoutes />
                 <Toaster

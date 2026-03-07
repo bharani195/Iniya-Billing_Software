@@ -3,6 +3,8 @@ import { FiPlus, FiDollarSign, FiX, FiEye, FiUser, FiPhone, FiMail, FiMapPin, Fi
 import { paymentsAPI, customersAPI } from '../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import DatePicker from '../components/DatePicker';
+import Dropdown from '../components/Dropdown';
 
 const Modal = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
@@ -186,14 +188,16 @@ export default function Payments() {
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
-                                <select value={formData.mode} onChange={(e) => setFormData({ ...formData, mode: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-emerald-500 outline-none">
-                                    {modes.map(m => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-                                </select>
+                                <Dropdown
+                                    options={modes.map(m => ({ value: m, label: m.toUpperCase() }))}
+                                    value={formData.mode}
+                                    onChange={(val) => setFormData({ ...formData, mode: val })}
+                                />
                             </div>
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
-                            <input type="date" value={formData.payment_date} onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-emerald-500 outline-none" />
+                            <DatePicker value={formData.payment_date} onChange={(val) => setFormData({ ...formData, payment_date: val })} placeholder="Select payment date" />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Reference</label>

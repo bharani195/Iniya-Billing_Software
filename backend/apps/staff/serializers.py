@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Staff, Attendance, PaySlip, WorkerAssignment
+from .models import Staff, Attendance, PaySlip, WorkerAssignment, Holiday
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -63,4 +63,12 @@ class WorkerAssignmentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = WorkerAssignment
+        fields = '__all__'
+
+
+class HolidaySerializer(serializers.ModelSerializer):
+    holiday_type_display = serializers.CharField(source='get_holiday_type_display', read_only=True)
+    
+    class Meta:
+        model = Holiday
         fields = '__all__'

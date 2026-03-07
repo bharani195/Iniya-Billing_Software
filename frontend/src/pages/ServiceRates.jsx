@@ -4,6 +4,7 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { jobordersAPI } from '../services/api';
+import Dropdown from '../components/Dropdown';
 
 // Delete Confirmation Modal Component
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
@@ -281,15 +282,30 @@ export default function ServiceRates() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
-                                            <select value={formData.category || 'other'} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-purple-500 outline-none">
-                                                <option value="design">Design Work</option><option value="printing">Printing</option><option value="finishing">Finishing</option><option value="other">Other</option>
-                                            </select>
+                                            <Dropdown
+                                                options={[
+                                                    { value: 'design', label: 'Design Work' },
+                                                    { value: 'printing', label: 'Printing' },
+                                                    { value: 'finishing', label: 'Finishing' },
+                                                    { value: 'other', label: 'Other' },
+                                                ]}
+                                                value={formData.category || 'other'}
+                                                onChange={(val) => setFormData({ ...formData, category: val })}
+                                            />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-gray-700 mb-2">Rate Type</label>
-                                            <select value={formData.rate_type || 'fixed'} onChange={(e) => setFormData({ ...formData, rate_type: e.target.value })} className="input-pro w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-purple-500 outline-none">
-                                                <option value="fixed">Fixed Amount</option><option value="per_meter">Per Meter</option><option value="per_piece">Per Piece</option><option value="per_color">Per Color</option><option value="per_sqm">Per Sq. Meter</option>
-                                            </select>
+                                            <Dropdown
+                                                options={[
+                                                    { value: 'fixed', label: 'Fixed Amount' },
+                                                    { value: 'per_meter', label: 'Per Meter' },
+                                                    { value: 'per_piece', label: 'Per Piece' },
+                                                    { value: 'per_color', label: 'Per Color' },
+                                                    { value: 'per_sqm', label: 'Per Sq. Meter' },
+                                                ]}
+                                                value={formData.rate_type || 'fixed'}
+                                                onChange={(val) => setFormData({ ...formData, rate_type: val })}
+                                            />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">

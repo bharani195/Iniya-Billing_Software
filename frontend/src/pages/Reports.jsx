@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import Chart from 'react-apexcharts';
-import { FiCalendar, FiTrendingUp, FiTrendingDown, FiDollarSign, FiBox, FiBarChart2, FiPieChart, FiActivity, FiRefreshCw, FiDownload, FiArrowUpRight, FiArrowDownRight, FiZap, FiTarget, FiAward } from 'react-icons/fi';
+import { FiCalendar, FiTrendingUp, FiTrendingDown, FiDollarSign, FiBox, FiBarChart2, FiPieChart, FiActivity, FiRefreshCw, FiDownload, FiArrowUpRight, FiArrowDownRight, FiZap, FiTarget, FiAward, FiUsers } from 'react-icons/fi';
 import { reportsAPI } from '../services/api';
 import { format, subDays } from 'date-fns';
 import toast from 'react-hot-toast';
+import DatePicker from '../components/DatePicker';
+import Dropdown from '../components/Dropdown';
 
 export default function Reports() {
     const [activeTab, setActiveTab] = useState('sales');
@@ -15,7 +17,14 @@ export default function Reports() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => { fetchReport(); }, [activeTab, dateRange]);
+    // Salary report state
+    const [salaryData, setSalaryData] = useState(null);
+    const [salaryMonth, setSalaryMonth] = useState(new Date().getMonth() + 1);
+    const [salaryYear, setSalaryYear] = useState(new Date().getFullYear());
+    const [salaryReportType, setSalaryReportType] = useState('monthly');
+    const [salaryLoading, setSalaryLoading] = useState(false);
+
+    useEffect(() => { if (activeTab === 'salary') fetchSalaryReport(); else fetchReport(); }, [activeTab, dateRange, salaryMonth, salaryYear, salaryReportType]);
 
     const fetchReport = async () => {
         setLoading(true);
@@ -35,7 +44,34 @@ export default function Reports() {
         finally { setLoading(false); setRefreshing(false); }
     };
 
-    const handleRefresh = () => { setRefreshing(true); fetchReport(); };
+    const handleRefresh = () => { setRefreshing(true); if (activeTab === 'salary') fetchSalaryReport(); else fetchReport(); };
+
+    const fetchSalaryReport = async () => {
+        setSalaryLoading(true);
+        try {
+            const params = { type: salaryReportType, month: salaryMonth, year: salaryYear };
+            const response = await reportsAPI.getStaffSalary(params);
+            setSalaryData(response.data);
+        } catch { toast.error('Failed to load salary report'); }
+        finally { setSalaryLoading(false); setRefreshing(false); }
+    };
+
+    const downloadExcel = async () => {
+        try {
+            const params = { type: salaryReportType, month: salaryMonth, year: salaryYear };
+            const response = await reportsAPI.downloadStaffSalaryExcel(params);
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            link.setAttribute('download', salaryReportType === 'monthly' ? `Staff_Salary_${monthNames[salaryMonth - 1]}_${salaryYear}.xlsx` : `Staff_Salary_Yearly_${salaryYear}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Excel downloaded!');
+        } catch { toast.error('Failed to download Excel'); }
+    };
 
     const formatCurrency = (a) => `₹${Number(a || 0).toLocaleString('en-IN')}`;
     const tabs = [
@@ -44,6 +80,7 @@ export default function Reports() {
         { id: 'profit', label: 'P&L', icon: FiTarget, color: 'from-blue-500 to-indigo-600' },
         { id: 'gst', label: 'GST', icon: FiDollarSign, color: 'from-violet-500 to-purple-600' },
         { id: 'stock', label: 'Stock', icon: FiBox, color: 'from-pink-500 to-rose-600' },
+        { id: 'salary', label: 'Salary', icon: FiUsers, color: 'from-cyan-500 to-blue-600' },
     ];
 
     const salesChartOptions = {
@@ -92,9 +129,9 @@ export default function Reports() {
             `}</style>
 
             {/* Epic Header */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-8 shadow-2xl glow-violet">
+            <div className="relative rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 shadow-2xl glow-violet">
                 {/* Animated Background Elements */}
-                <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute inset-0 overflow-hidden rounded-3xl">
                     <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-float"></div>
                     <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }}></div>
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
@@ -103,7 +140,7 @@ export default function Reports() {
                 </div>
 
                 <div className="relative z-10">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                         <div className="text-white">
                             <div className="flex items-center gap-4 mb-3">
                                 <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-xl flex items-center justify-center shadow-lg">
@@ -122,38 +159,39 @@ export default function Reports() {
                             <p className="text-white/60 text-lg max-w-md">Real-time analytics and insights to help you make data-driven decisions</p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            {/* Date Range Picker */}
-                            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xl rounded-2xl px-5 py-3 border border-white/10">
-                                <FiCalendar className="w-5 h-5 text-white/70" />
-                                <input type="date" value={dateRange.start} onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })} className="bg-transparent text-white outline-none font-medium" />
-                                <span className="text-white/40">→</span>
-                                <input type="date" value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })} className="bg-transparent text-white outline-none font-medium" />
+                        <div className="flex flex-col items-end gap-3">
+                            {/* Tab Navigation — Top */}
+                            <div className="flex flex-wrap gap-1.5 justify-end">
+                                {tabs.map((tab, idx) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`group relative flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-white text-gray-800 shadow-lg shadow-white/20' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
+                                        style={{ animationDelay: `${idx * 50}ms` }}
+                                    >
+                                        <tab.icon className="w-4 h-4" />
+                                        {tab.label}
+                                        {activeTab === tab.id && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full"></div>}
+                                    </button>
+                                ))}
                             </div>
-                            {/* Quick Actions */}
-                            <button onClick={handleRefresh} disabled={refreshing} className="p-3 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/20 transition-all disabled:opacity-50">
-                                <FiRefreshCw className={`w-5 h-5 text-white ${refreshing ? 'animate-spin' : ''}`} />
-                            </button>
-                            <button className="p-3 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/20 transition-all">
-                                <FiDownload className="w-5 h-5 text-white" />
-                            </button>
-                        </div>
-                    </div>
 
-                    {/* Tab Navigation */}
-                    <div className="mt-8 flex flex-wrap gap-2">
-                        {tabs.map((tab, idx) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`group relative flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-white text-gray-800 shadow-lg shadow-white/20' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
-                                style={{ animationDelay: `${idx * 50}ms` }}
-                            >
-                                <tab.icon className="w-4 h-4" />
-                                {tab.label}
-                                {activeTab === tab.id && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full"></div>}
-                            </button>
-                        ))}
+                            {/* Date Range Picker — Below Tabs */}
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xl rounded-2xl px-5 py-3 border border-white/10">
+                                    <FiCalendar className="w-5 h-5 text-white/70" />
+                                    <DatePicker value={dateRange.start} onChange={(val) => setDateRange({ ...dateRange, start: val })} dark placeholder="Start date" />
+                                    <span className="text-white/40">→</span>
+                                    <DatePicker value={dateRange.end} onChange={(val) => setDateRange({ ...dateRange, end: val })} dark placeholder="End date" />
+                                </div>
+                                <button onClick={handleRefresh} disabled={refreshing} className="p-3 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/20 transition-all disabled:opacity-50">
+                                    <FiRefreshCw className={`w-5 h-5 text-white ${refreshing ? 'animate-spin' : ''}`} />
+                                </button>
+                                <button className="p-3 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/20 transition-all">
+                                    <FiDownload className="w-5 h-5 text-white" />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -514,6 +552,231 @@ export default function Reports() {
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* ═══════ SALARY REPORT ═══════ */}
+                    {activeTab === 'salary' && (
+                        <div className="space-y-6">
+                            {/* Controls */}
+                            <div className="glass-card rounded-2xl p-5 shadow-lg border border-gray-100">
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        {/* Monthly/Yearly Toggle */}
+                                        <div className="flex bg-gray-100 rounded-xl p-1">
+                                            <button onClick={() => setSalaryReportType('monthly')}
+                                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${salaryReportType === 'monthly' ? 'bg-white text-violet-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                                                Monthly
+                                            </button>
+                                            <button onClick={() => setSalaryReportType('yearly')}
+                                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${salaryReportType === 'yearly' ? 'bg-white text-violet-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                                                Yearly
+                                            </button>
+                                        </div>
+                                        {salaryReportType === 'monthly' && (
+                                            <Dropdown
+                                                className="min-w-[140px]"
+                                                options={['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m, i) => ({ value: i + 1, label: m }))}
+                                                value={salaryMonth}
+                                                onChange={(val) => setSalaryMonth(parseInt(val))}
+                                            />
+                                        )}
+                                        <Dropdown
+                                            className="min-w-[100px]"
+                                            options={[...Array(5)].map((_, i) => { const y = new Date().getFullYear() - 2 + i; return { value: y, label: String(y) }; })}
+                                            value={salaryYear}
+                                            onChange={(val) => setSalaryYear(parseInt(val))}
+                                        />
+                                    </div>
+                                    <button onClick={downloadExcel}
+                                        className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-sm font-bold hover:shadow-lg transition-all flex items-center gap-2">
+                                        <FiDownload className="w-4 h-4" /> Export Excel
+                                    </button>
+                                </div>
+                            </div>
+
+                            {salaryLoading ? (
+                                <div className="flex items-center justify-center py-16">
+                                    <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-500 rounded-full animate-spin"></div>
+                                </div>
+                            ) : salaryData && salaryReportType === 'monthly' ? (
+                                <>
+                                    {/* Monthly Stats */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="stat-card rounded-2xl p-6 shadow-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white relative overflow-hidden">
+                                            <div className="absolute inset-0 shimmer pointer-events-none"></div>
+                                            <div className="relative">
+                                                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-3">
+                                                    <FiDollarSign className="w-6 h-6" />
+                                                </div>
+                                                <p className="text-white/80 text-sm mb-1">Total Net Salary</p>
+                                                <p className="text-3xl font-bold">{formatCurrency(salaryData.summary?.total_net)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="stat-card glass-card rounded-2xl p-6 shadow-lg border border-gray-100">
+                                            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-3">
+                                                <FiTrendingUp className="w-6 h-6 text-blue-600" />
+                                            </div>
+                                            <p className="text-gray-500 text-sm mb-1">Gross Salary</p>
+                                            <p className="text-3xl font-bold text-gray-800">{formatCurrency(salaryData.summary?.total_gross)}</p>
+                                        </div>
+                                        <div className="stat-card glass-card rounded-2xl p-6 shadow-lg border border-red-100 bg-gradient-to-br from-red-50 to-white">
+                                            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mb-3">
+                                                <FiTrendingDown className="w-6 h-6 text-red-600" />
+                                            </div>
+                                            <p className="text-red-600 text-sm mb-1">Deductions</p>
+                                            <p className="text-3xl font-bold text-red-700">{formatCurrency(salaryData.summary?.total_deductions)}</p>
+                                        </div>
+                                        <div className="stat-card glass-card rounded-2xl p-6 shadow-lg border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white">
+                                            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-3">
+                                                <FiActivity className="w-6 h-6 text-emerald-600" />
+                                            </div>
+                                            <p className="text-emerald-600 text-sm mb-1">Overtime</p>
+                                            <p className="text-3xl font-bold text-emerald-700">{formatCurrency(salaryData.summary?.total_overtime)}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Payment Status Pills */}
+                                    <div className="flex gap-3">
+                                        <span className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-bold">
+                                            ✅ {salaryData.summary?.paid_count || 0} Paid
+                                        </span>
+                                        <span className="px-4 py-2 bg-amber-100 text-amber-700 rounded-full text-sm font-bold">
+                                            ⏳ {salaryData.summary?.pending_count || 0} Pending
+                                        </span>
+                                        <span className="px-4 py-2 bg-cyan-100 text-cyan-700 rounded-full text-sm font-bold">
+                                            🔴 {salaryData.summary?.live_count || 0} Live
+                                        </span>
+                                    </div>
+
+                                    {/* Monthly Salary Table */}
+                                    <div className="glass-card rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                                        <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-violet-50 to-white">
+                                            <h3 className="font-bold text-gray-800 text-lg">Monthly Salary Sheet — {salaryData.month_name} {salaryData.year}</h3>
+                                            <p className="text-gray-500 text-sm">{salaryData.staff_count} staff members • {salaryData.days_in_month} calendar days</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full min-w-[1100px]">
+                                                <thead>
+                                                    <tr className="bg-gray-50/80">
+                                                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Staff</th>
+                                                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Role</th>
+                                                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Work Days</th>
+                                                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Present</th>
+                                                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Absent</th>
+                                                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Sun</th>
+                                                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Holidays</th>
+                                                        <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Gross</th>
+                                                        <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Deductions</th>
+                                                        <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">OT</th>
+                                                        <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Net Salary</th>
+                                                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {salaryData.staff?.map((s, idx) => (
+                                                        <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                                                            <td className="px-4 py-3">
+                                                                <p className="font-semibold text-gray-800">{s.name}</p>
+                                                                <p className="text-xs text-gray-400">{s.salary_type === 'daily' ? `₹${s.daily_rate}/day` : `₹${s.monthly_salary}/mo`}</p>
+                                                            </td>
+                                                            <td className="text-center px-3 py-3 text-sm text-gray-600">{s.role}</td>
+                                                            <td className="text-center px-3 py-3 font-medium text-gray-700">{s.total_working_days}</td>
+                                                            <td className="text-center px-3 py-3"><span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">{s.days_present}</span></td>
+                                                            <td className="text-center px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-bold ${s.days_absent > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{s.days_absent}</span></td>
+                                                            <td className="text-center px-3 py-3 text-sm text-gray-500">{s.sundays}</td>
+                                                            <td className="text-center px-3 py-3 text-sm text-gray-500">{s.holidays_count}</td>
+                                                            <td className="text-right px-3 py-3 text-sm font-medium text-gray-700">{formatCurrency(s.gross_salary)}</td>
+                                                            <td className="text-right px-3 py-3 text-sm font-medium text-red-600">{s.deductions > 0 ? `-${formatCurrency(s.deductions)}` : '—'}</td>
+                                                            <td className="text-right px-3 py-3 text-sm font-medium text-emerald-600">{s.overtime_amount > 0 ? `+${formatCurrency(s.overtime_amount)}` : '—'}</td>
+                                                            <td className="text-right px-3 py-3 font-bold text-violet-700 text-lg">{formatCurrency(s.net_salary)}</td>
+                                                            <td className="text-center px-3 py-3">
+                                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${s.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' : s.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-cyan-100 text-cyan-700'}`}>
+                                                                    {s.payment_status === 'paid' ? '✅ Paid' : s.payment_status === 'pending' ? '⏳ Pending' : '🔴 Live'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    {/* Totals Row */}
+                                                    <tr className="bg-gray-50 font-bold">
+                                                        <td className="px-4 py-4 text-gray-800" colSpan={7}>TOTAL</td>
+                                                        <td className="text-right px-3 py-4 text-gray-800">{formatCurrency(salaryData.summary?.total_gross)}</td>
+                                                        <td className="text-right px-3 py-4 text-red-600">-{formatCurrency(salaryData.summary?.total_deductions)}</td>
+                                                        <td className="text-right px-3 py-4 text-emerald-600">+{formatCurrency(salaryData.summary?.total_overtime)}</td>
+                                                        <td className="text-right px-3 py-4 text-violet-700 text-lg">{formatCurrency(salaryData.summary?.total_net)}</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : salaryData && salaryReportType === 'yearly' ? (
+                                <>
+                                    {/* Grand Total Card */}
+                                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-8 text-white shadow-2xl">
+                                        <div className="absolute inset-0 shimmer pointer-events-none"></div>
+                                        <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                                        <div className="relative">
+                                            <p className="text-white/70 font-medium mb-2">Total Salary Paid — {salaryYear}</p>
+                                            <p className="text-5xl font-bold mb-2">{formatCurrency(salaryData.grand_total)}</p>
+                                            <p className="text-white/60">{salaryData.staff_count} staff members</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Yearly Table */}
+                                    <div className="glass-card rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                                        <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-violet-50 to-white">
+                                            <h3 className="font-bold text-gray-800 text-lg">Yearly Salary Summary — {salaryYear}</h3>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full min-w-[900px]">
+                                                <thead>
+                                                    <tr className="bg-gray-50/80">
+                                                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Staff</th>
+                                                        <th className="text-center px-2 py-3 text-xs font-semibold text-gray-500 uppercase">Role</th>
+                                                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (
+                                                            <th key={m} className="text-right px-2 py-3 text-xs font-semibold text-gray-500 uppercase">{m}</th>
+                                                        ))}
+                                                        <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {salaryData.staff?.map(s => (
+                                                        <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                                                            <td className="px-4 py-3 font-semibold text-gray-800">{s.name}</td>
+                                                            <td className="text-center px-2 py-3 text-sm text-gray-500">{s.role}</td>
+                                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => {
+                                                                const monthData = s.months[m];
+                                                                return (
+                                                                    <td key={m} className="text-right px-2 py-3 text-sm">
+                                                                        {monthData ? (
+                                                                            <span className={monthData.payment_status === 'paid' ? 'text-emerald-600 font-medium' : 'text-gray-700'}>
+                                                                                {formatCurrency(monthData.net_salary)}
+                                                                            </span>
+                                                                        ) : <span className="text-gray-300">—</span>}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                            <td className="text-right px-4 py-3 font-bold text-violet-700">{formatCurrency(s.yearly_total)}</td>
+                                                        </tr>
+                                                    ))}
+                                                    {/* Month Totals Row */}
+                                                    <tr className="bg-gray-50 font-bold">
+                                                        <td className="px-4 py-4 text-gray-800" colSpan={2}>TOTAL</td>
+                                                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (
+                                                            <td key={m} className="text-right px-2 py-4 text-sm text-gray-700">
+                                                                {formatCurrency(salaryData.month_totals?.[m] || 0)}
+                                                            </td>
+                                                        ))}
+                                                        <td className="text-right px-4 py-4 text-violet-700 text-lg">{formatCurrency(salaryData.grand_total)}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : null}
                         </div>
                     )}
                 </div>

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
-    FiClipboard, FiUser, FiPackage, FiImage, FiPrinter, FiCalendar, FiClock,
-    FiPlus, FiTrash2, FiSave, FiArrowLeft, FiArrowRight, FiDollarSign, FiUsers, FiGrid, FiFileText
+    FiFileText, FiUser, FiArrowLeft, FiPlus, FiTrash2, FiSave, FiCalendar, FiCheck,
+    FiClipboard, FiTool, FiPackage, FiSettings, FiClock, FiImage
 } from 'react-icons/fi';
+import DatePicker from '../components/DatePicker';
+import Dropdown from '../components/Dropdown';
 import toast from 'react-hot-toast';
 import { jobordersAPI, customersAPI, staffAPI } from '../services/api';
 
@@ -442,16 +444,15 @@ export default function CreateJobOrder() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                            <select
-                                name="priority"
+                            <Dropdown
+                                options={[
+                                    { value: 'normal', label: 'Normal' },
+                                    { value: 'urgent', label: 'Urgent' },
+                                    { value: 'express', label: 'Express' },
+                                ]}
                                 value={formData.priority}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#A500FF] focus:ring-2 focus:ring-[#A500FF]/20 outline-none"
-                            >
-                                <option value="normal">Normal</option>
-                                <option value="urgent">Urgent</option>
-                                <option value="express">Express</option>
-                            </select>
+                                onChange={(val) => setFormData(prev => ({ ...prev, priority: val }))}
+                            />
                         </div>
                     </div>
                 </div>
@@ -488,18 +489,17 @@ export default function CreateJobOrder() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                            <select
-                                name="material_unit"
+                            <Dropdown
+                                options={[
+                                    { value: 'MTR', label: 'Meters' },
+                                    { value: 'PCS', label: 'Pieces' },
+                                    { value: 'ROLL', label: 'Rolls' },
+                                    { value: 'KG', label: 'Kilograms' },
+                                    { value: 'SQM', label: 'Sq. Meters' },
+                                ]}
                                 value={formData.material_unit}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#A500FF] focus:ring-2 focus:ring-[#A500FF]/20 outline-none"
-                            >
-                                <option value="MTR">Meters</option>
-                                <option value="PCS">Pieces</option>
-                                <option value="ROLL">Rolls</option>
-                                <option value="KG">Kilograms</option>
-                                <option value="SQM">Sq. Meters</option>
-                            </select>
+                                onChange={(val) => setFormData(prev => ({ ...prev, material_unit: val }))}
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -622,12 +622,10 @@ export default function CreateJobOrder() {
                                 <FiCalendar className="w-4 h-4" />
                                 Expected Delivery
                             </label>
-                            <input
-                                type="date"
-                                name="expected_delivery"
+                            <DatePicker
                                 value={formData.expected_delivery}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#A500FF] focus:ring-2 focus:ring-[#A500FF]/20 outline-none"
+                                onChange={(val) => setFormData(prev => ({ ...prev, expected_delivery: val }))}
+                                placeholder="Select delivery date"
                             />
                         </div>
                         <div>
@@ -1010,7 +1008,7 @@ export default function CreateJobOrder() {
                         )}
                     </button>
                 </div>
-            </form>
-        </div>
+            </form >
+        </div >
     );
 }

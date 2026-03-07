@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlus, FiSearch, FiEye, FiDownload, FiFileText, FiPrinter, FiMail, FiTrash2, FiAlertTriangle, FiEdit } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEye, FiPrinter, FiDownload, FiFileText, FiMail, FiTrash2, FiAlertTriangle, FiEdit } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { invoicesAPI } from '../services/api';
 import { shareInvoiceViaWhatsApp } from '../utils/whatsappUtils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import Dropdown from '../components/Dropdown';
 
 // Delete Confirmation Modal Component
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
@@ -34,12 +35,45 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
     );
 };
 
+// Email Confirmation Modal Component
+const EmailConfirmModal = ({ isOpen, onClose, onConfirm, invoice }) => {
+    if (!isOpen || !invoice) return null;
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+            <div className="flex min-h-full items-center justify-center p-4">
+                <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl transform transition-all animate-fadeIn" onClick={e => e.stopPropagation()}>
+                    <div className="p-6 text-center">
+                        <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                            <FiMail className="w-8 h-8 text-blue-500" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Send Invoice Email</h3>
+                        <p className="text-gray-500 mb-2">
+                            Send invoice <span className="font-semibold text-gray-700">{invoice.invoice_number}</span> to:
+                        </p>
+                        <p className="text-sm font-semibold text-gray-800 bg-gray-50 px-4 py-2 rounded-lg mb-5">
+                            {invoice.customer_name} — {invoice.customer_email || 'No email'}
+                        </p>
+                        <div className="flex items-center justify-center gap-3">
+                            <button onClick={onClose} className="px-6 py-2.5 text-gray-600 font-medium rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
+                            <button onClick={onConfirm} className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-200 hover:shadow-xl transition-all flex items-center gap-2">
+                                <FiMail className="w-4 h-4" /> Send Email
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function Invoices() {
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, invoice: null });
+    const [emailModal, setEmailModal] = useState({ isOpen: false, invoice: null });
 
     useEffect(() => { fetchInvoices(); }, []);
 
@@ -126,13 +160,14 @@ export default function Invoices() {
         }
     };
 
-    // Send invoice via email
+    // Send invoice via email (called after confirmation)
     const sendEmailToCustomer = async (invoice) => {
         if (!invoice.customer_email) {
             toast.error('Customer email address not found');
             return;
         }
 
+        setEmailModal({ isOpen: false, invoice: null });
         try {
             toast.loading('Sending email...', { id: 'email-sending' });
             await invoicesAPI.sendEmail(invoice.id);
@@ -206,13 +241,18 @@ export default function Invoices() {
                         <FiSearch className="w-5 h-5 text-gray-400" />
                         <input type="text" placeholder="Search invoices..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-transparent border-none outline-none w-full text-gray-700" />
                     </div>
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input-pro px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-blue-500 outline-none min-w-[140px]">
-                        <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="partial">Partial</option>
-                        <option value="paid">Paid</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
+                    <Dropdown
+                        className="min-w-[140px]"
+                        options={[
+                            { value: 'all', label: 'All Status' },
+                            { value: 'pending', label: 'Pending' },
+                            { value: 'partial', label: 'Partial' },
+                            { value: 'paid', label: 'Paid' },
+                            { value: 'cancelled', label: 'Cancelled' },
+                        ]}
+                        value={statusFilter}
+                        onChange={(val) => setStatusFilter(val)}
+                    />
                 </div>
             </div>
 
@@ -260,7 +300,7 @@ export default function Invoices() {
                                                 </Link>
                                                 <button onClick={() => printBill(inv)} className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Print"><FiPrinter className="w-4 h-4" /></button>
                                                 <button onClick={() => downloadBill(inv)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download"><FiDownload className="w-4 h-4" /></button>
-                                                <button onClick={() => sendEmailToCustomer(inv)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Send Email"><FiMail className="w-4 h-4" /></button>
+                                                <button onClick={() => setEmailModal({ isOpen: true, invoice: inv })} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Send Email"><FiMail className="w-4 h-4" /></button>
                                                 <button onClick={() => shareViaWhatsApp(inv)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Share via WhatsApp"><FaWhatsapp className="w-4 h-4" /></button>
                                                 <button onClick={() => openDeleteModal(inv)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete"><FiTrash2 className="w-4 h-4" /></button>
                                             </div>
@@ -284,6 +324,14 @@ export default function Invoices() {
                 onClose={closeDeleteModal}
                 onConfirm={handleDelete}
                 itemName={deleteModal.invoice?.invoice_number}
+            />
+
+            {/* Email Confirmation Modal */}
+            <EmailConfirmModal
+                isOpen={emailModal.isOpen}
+                onClose={() => setEmailModal({ isOpen: false, invoice: null })}
+                onConfirm={() => sendEmailToCustomer(emailModal.invoice)}
+                invoice={emailModal.invoice}
             />
         </div>
     );
