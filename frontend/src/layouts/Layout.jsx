@@ -11,11 +11,11 @@ import {
 import toast from 'react-hot-toast';
 
 const sidebarItems = [
-    { path: '/', icon: FiHome, label: 'Dashboard', color: '#FF0000' }, // Purple
+    { path: '/', icon: FiHome, label: 'Dashboard', color: '#f4f7f7ff' }, // Purple
     {
         label: 'Parties',
         icon: FiUsers,
-        color: '#0279f8ff', // Cyan
+        color: '#f4f7f7ff', // Cyan
         children: [
             { path: '/customers', icon: FiUsers, label: 'Customers' },
             { path: '/suppliers', icon: FiTruck, label: 'Suppliers' },
@@ -24,7 +24,7 @@ const sidebarItems = [
     {
         label: 'Orders',
         icon: FiClipboard,
-        color: '#EC4899', // Pink
+        color: '#f4f7f7ff', // Pink
         children: [
             { path: '/customers/add', icon: FiPlusCircle, label: 'New Order' },
             { path: '/joborders', icon: FiClipboard, label: 'All Orders' },
@@ -34,17 +34,17 @@ const sidebarItems = [
     {
         label: 'Sales',
         icon: FiFileText,
-        color: '#10B981', // Emerald
+        color: '#f4f7f7ff', // Emerald
         children: [
             { path: '/invoices/create', icon: FiPlusCircle, label: 'New Invoice' },
             { path: '/invoices', icon: FiFileText, label: 'All Invoices' },
         ]
     },
-    { path: '/expenses', icon: FiCreditCard, label: 'Expenses', color: '#F97316' }, // Orange
-    { path: '/payments', icon: FiDollarSign, label: 'Payments', color: '#22C55E' }, // Green
-    { path: '/staff', icon: FiUserCheck, label: 'Staff', color: '#8B5CF6' }, // Violet
-    { path: '/reports', icon: FiBarChart2, label: 'Reports', color: '#3B82F6' }, // Blue
-    { path: '/settings', icon: FiSettings, label: 'Settings', color: '#14B8A6' }, // Teal
+    { path: '/expenses', icon: FiCreditCard, label: 'Expenses', color: '#f4f7f7ff' }, // Orange
+    { path: '/payments', icon: FiDollarSign, label: 'Payments', color: '#f4f7f7ff' }, // Green
+    { path: '/staff', icon: FiUserCheck, label: 'Staff', color: '#f4f7f7ff' }, // Violet
+    { path: '/reports', icon: FiBarChart2, label: 'Reports', color: '#f4f7f7ff' }, // Blue
+    { path: '/settings', icon: FiSettings, label: 'Settings', color: '#f4f7f7ff' }, // Teal
 ];
 
 const SidebarItem = ({ item, collapsed }) => {
@@ -63,15 +63,15 @@ const SidebarItem = ({ item, collapsed }) => {
                         w-full group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
                         transition-all duration-300 ease-out
                         ${isActive
-                            ? 'bg-[#1A1A1C] text-white'
-                            : 'text-[#8892B0] hover:bg-[#1A1A1C] hover:text-white'
+                            ? 'bg-transparent'
+                            : 'text-[#8892B0] hover:bg-[#ffffff08] hover:text-[#c8cfe0]'
                         }
                     `}
                 >
                     {/* Active indicator with module color */}
                     {isActive && (
                         <div
-                            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
+                            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
                             style={{
                                 backgroundColor: moduleColor,
                                 boxShadow: `0 0 12px ${moduleColor}`
@@ -79,28 +79,24 @@ const SidebarItem = ({ item, collapsed }) => {
                         />
                     )}
 
-                    {/* Icon with module color */}
+                    {/* Icon — no background box, just colored icon */}
                     <div
-                        className={`
-                            flex items-center justify-center w-9 h-9 rounded-xl
-                            transition-all duration-300 group-hover:scale-105
-                        `}
-                        style={isActive ? {
-                            backgroundColor: moduleColor,
-                            color: 'white',
-                            boxShadow: `0 0 20px ${moduleColor}50`
-                        } : {
-                            backgroundColor: '#1A1A1C',
-                            color: '#8892B0'
-                        }}
+                        className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300 group-hover:scale-105"
+                        style={{ color: isActive ? moduleColor : '#8892B0' }}
                     >
                         <item.icon className="w-[18px] h-[18px]" />
                     </div>
 
                     {!collapsed && (
                         <>
-                            <span className="flex-1 text-left font-medium text-[14px]">{item.label}</span>
-                            <FiChevronDown className={`w-4 h-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
+                            <span
+                                className="flex-1 text-left font-medium text-[14px] transition-colors duration-300"
+                                style={{ color: isActive ? moduleColor : undefined }}
+                            >{item.label}</span>
+                            <FiChevronDown
+                                className={`w-4 h-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+                                style={{ color: isActive ? moduleColor : undefined }}
+                            />
                         </>
                     )}
                 </button>
@@ -123,14 +119,12 @@ const SidebarItem = ({ item, collapsed }) => {
                                     flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px]
                                     transition-all duration-200
                                     ${childActive
-                                        ? 'font-medium'
-                                        : 'text-[#6B7599] hover:text-[#A8B2D1] hover:bg-[#1A1A1C]'
+                                        ? 'font-medium bg-transparent'
+                                        : 'text-[#6B7599] hover:text-[#A8B2D1] hover:bg-[#ffffff08]'
                                     }
                                 `}
                                 style={({ isActive: childActive }) => childActive ? {
-                                    backgroundColor: `${moduleColor}20`,
-                                    color: moduleColor,
-                                    boxShadow: `0 0 10px ${moduleColor}30`
+                                    color: moduleColor
                                 } : {}}
                             >
                                 <child.icon className="w-4 h-4" />
@@ -152,15 +146,15 @@ const SidebarItem = ({ item, collapsed }) => {
                 group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
                 transition-all duration-300 ease-out
                 ${isActive
-                    ? 'bg-[#1A1A1C] text-white'
-                    : 'text-[#8892B0] hover:bg-[#1A1A1C] hover:text-white'
+                    ? 'bg-transparent'
+                    : 'text-[#8892B0] hover:bg-[#ffffff08] hover:text-[#c8cfe0]'
                 }
             `}
         >
             {/* Active indicator with module color */}
             {isActive && (
                 <div
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
                     style={{
                         backgroundColor: moduleColor,
                         boxShadow: `0 0 12px ${moduleColor}`
@@ -168,26 +162,19 @@ const SidebarItem = ({ item, collapsed }) => {
                 />
             )}
 
-            {/* Icon with module color */}
+            {/* Icon — no background box, just colored icon */}
             <div
-                className={`
-                    flex items-center justify-center w-9 h-9 rounded-xl
-                    transition-all duration-300 group-hover:scale-105
-                `}
-                style={isActive ? {
-                    backgroundColor: moduleColor,
-                    color: 'white',
-                    boxShadow: `0 0 20px ${moduleColor}50`
-                } : {
-                    backgroundColor: '#1A1A1C',
-                    color: '#8892B0'
-                }}
+                className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300 group-hover:scale-105"
+                style={{ color: isActive ? moduleColor : '#8892B0' }}
             >
                 <item.icon className="w-[18px] h-[18px]" />
             </div>
 
             {!collapsed && (
-                <span className="font-medium text-[14px]">{item.label}</span>
+                <span
+                    className="font-medium text-[14px] transition-colors duration-300"
+                    style={{ color: isActive ? moduleColor : undefined }}
+                >{item.label}</span>
             )}
 
             {/* Hover arrow */}
@@ -424,7 +411,7 @@ export default function Layout() {
                         <NavLink
                             to="/customers/add"
                             className="flex items-center justify-center gap-2 w-full py-3 px-4
-                                bg-[#2600ffff]
+                                bg-[#9110C2]
                                 text-white font-semibold text-sm rounded-xl
                                 shadow-[0_0_25px_rgba(165,0,255,0.4)]
                                 hover:shadow-[0_0_35px_rgba(165,0,255,0.6)] hover:-translate-y-0.5
